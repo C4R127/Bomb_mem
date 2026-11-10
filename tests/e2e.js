@@ -119,8 +119,11 @@ async function main() {
     comprobar(await esperarEscena(p, "Portada"), "Esc en la pantalla de fin vuelve a la portada");
     await p.keyboard.press("Enter");
     comprobar(await esperarEscena(p, "Juego"), "Enter en la portada empieza otra partida");
+    await esperarFase(p, ["mostrando", "respondiendo"]);
     await p.keyboard.press("Escape");
-    comprobar(await esperarEscena(p, "Portada"), "Esc durante la partida vuelve a la portada");
+    await p.waitForTimeout(150);
+    await p.keyboard.press("s");
+    comprobar(await esperarEscena(p, "Portada"), "Esc (pausa) + S durante la partida vuelve a la portada");
     await p.keyboard.press("Enter");
     comprobar(await esperarEscena(p, "Juego"), "y se puede volver a jugar");
     comprobar(p.errores.length === 0, "sin errores de JavaScript " + p.errores.join(" | "));
@@ -140,7 +143,8 @@ async function main() {
     for (let v = 0; v < 3; v++) {
       await p.keyboard.press("Enter"); await esperarEscena(p, "Juego"); await p.waitForTimeout(300);
       vistos.Juego.add(await contar("Juego"));
-      await p.keyboard.press("Escape"); await esperarEscena(p, "Portada"); await p.waitForTimeout(300);
+      await p.keyboard.press("Escape"); await p.waitForTimeout(100); await p.keyboard.press("s");
+      await esperarEscena(p, "Portada"); await p.waitForTimeout(300);
       vistos.Portada.add(await contar("Portada"));
     }
     comprobar(vistos.Juego.size === 1 && vistos.Portada.size === 1, `contadores estables (Juego ${[...vistos.Juego]}, Portada ${[...vistos.Portada]})`);
@@ -216,6 +220,98 @@ async function main() {
     const f = await esperarFase(p, ["explotada"], 8000);
     comprobar(f.fase === "explotada", "la bomba explota al llegar a cero");
     comprobar(await esperarEscena(p, "FinPartida"), "y se pasa a la pantalla de fin");
+    await p.close();
+  }
+
+  /* ===================================================== */
+  console.log("\n6. Pausa y música");
+  {
+    const p = await nuevaPagina();
+    const musica = () => p.evaluate(() => ({ pista: Musica.pista, atenuada: Musica.atenuada, pausada: Musica.pausada, activa: Musica.activa }));
+    await p.mouse.click(10, 10); // primer toque: el navegador permite el audio
+    await p.waitForTimeout(200);
+    comprobar((await musica()).pista === "portada", "suena la música de la portada");
+    await p.keyboard.press("Enter");
+    await esperarEscena(p, "Juego");
+    let s = await esperarFase(p, ["mostrando"]);
+    await p.waitForTimeout(1300);
+    s = await estado(p);
+    const m1 = await musica();
+    comprobar(m1.pista === "juego", "en la partida suena la música de juego");
+    comprobar(s.fase !== "mostrando" || m1.atenuada, "la música se calla mientras se enseña la secuencia");
+    s = await esperarFase(p, ["respondiendo"]);
+    comprobar(!(await musica()).atenuada, "y vuelve cuando es tu turno");
+
+    // Pausa: el reloj se congela y las teclas no responden
+    await p.keyboard.press("p");
+    await p.waitForTimeout(100);
+    const enPausa = await p.evaluate(() => { const g = juego.scene.getScene("Juego"); return { pausado: g.pausado, panel: g.panelPausa.visible, bombaVisible: g.bomba.visible }; });
+    comprobar(enPausa.pausado && enPausa.panel, "P abre el panel de pausa");
+    comprobar(!enPausa.bombaVisible, "la bomba se tapa durante la pausa");
+    comprobar((await musica()).pausada, "la música se baja en pausa");
+    const r1 = await p.evaluate(() => { const g = juego.scene.getScene("Juego"); return (g.estado.fin - g.time.now) / 1000; });
+    await p.keyboard.press(String(s.huecos[s.objetivo[0]] + 1)); // no debe contar
+    await p.waitForTimeout(2500);
+    comprobar((await estado(p)).fase === "respondiendo" && (await p.evaluate(() => juego.scene.getScene("Juego").estado.posicion)) === 0,
+      "las teclas no responden en pausa");
+    await p.keyboard.press("p");
+    await p.waitForTimeout(100);
+    const r2 = await p.evaluate(() => { const g = juego.scene.getScene("Juego"); return (g.estado.fin - g.time.now) / 1000; });
+    comprobar(Math.abs(r1 - r2) < 0.4, `el reloj no avanza en pausa (antes ${r1.toFixed(1)} s, después ${r2.toFixed(1)} s, tras 2,5 s de pausa)`);
+    comprobar(!(await p.evaluate(() => juego.scene.getScene("Juego").pausado)), "P otra vez continúa la partida");
+
+    // Botones de audio del panel
+    await p.keyboard.press("Escape");
+    await p.waitForTimeout(100);
+    await clic(p, 120, 212); // MÚSICA
+    comprobar(!(await musica()).activa, "el botón MÚSICA de la pausa la apaga");
+    comprobar(await p.evaluate(() => localStorage.getItem("bomba-musica")) === "no", "y la preferencia se guarda");
+    await clic(p, 120, 150); // CONTINUAR
+    await p.waitForTimeout(100);
+    comprobar(!(await p.evaluate(() => juego.scene.getScene("Juego").pausado)), "el botón CONTINUAR reanuda");
+
+    // Cambiar de pestaña pausa el juego
+    await p.evaluate(() => juego.events.emit("hidden"));
+    comprobar(await p.evaluate(() => juego.scene.getScene("Juego").pausado), "ocultar la pestaña pausa el juego");
+    await p.keyboard.press("p");
+
+    // Terminar la bomba tras la pausa: la secuencia sigue siendo válida
+    s = await estado(p);
+    await resolver(p, s);
+    comprobar((await esperarFase(p, ["desactivada", "explotada"])).fase === "desactivada", "tras la pausa se puede desactivar la bomba");
+
+    // Salir desde la pausa y volver a jugar (el reloj no debe quedarse congelado)
+    await esperarFase(p, ["respondiendo"]);
+    await p.keyboard.press("p"); await p.waitForTimeout(100);
+    await clic(p, 120, 246); // SALIR A PORTADA
+    comprobar(await esperarEscena(p, "Portada"), "SALIR A PORTADA desde la pausa");
+    await p.keyboard.press("Enter");
+    const s3 = await esperarFase(p, ["respondiendo"]);
+    comprobar(s3.nivel === 1, "y la nueva partida arranca con normalidad (reloj no congelado)");
+    comprobar(p.errores.length === 0, "sin errores de JavaScript " + p.errores.join(" | "));
+    await p.close();
+  }
+
+  /* ===================================================== */
+  console.log("\n7. Teclas pulsadas muy seguidas (fallo de Phaser 3.80)");
+  {
+    const p = await nuevaPagina();
+    await p.keyboard.press("w"); await p.keyboard.press("h"); // sin espera entre ellas
+    await p.waitForTimeout(250);
+    comprobar(await p.evaluate(() => juego.scene.getScene("Portada").ayudaAbierta), "una tecla seguida de H abre la ayuda (no la abre y cierra)");
+    await p.keyboard.press("h"); await p.waitForTimeout(200);
+    let aciertos = 0;
+    for (let r = 0; r < 4; r++) {
+      await p.keyboard.press("Enter");
+      const s = await esperarFase(p, ["respondiendo"]);
+      // todas las teclas de la secuencia sin ninguna espera entre ellas
+      for (const id of s.objetivo) await p.keyboard.press(String(s.huecos[id] + 1));
+      const f = await esperarFase(p, ["desactivada", "explotada"]);
+      if (f.fase === "desactivada") aciertos++;
+      await p.keyboard.press("Escape"); await p.waitForTimeout(100); await p.keyboard.press("s");
+      await esperarEscena(p, "Portada"); await p.waitForTimeout(250);
+    }
+    comprobar(aciertos === 4, `secuencias tecleadas sin pausa: ${aciertos}/4 desactivadas (antes la 1ª tecla se repetía y explotaba)`);
     await p.close();
   }
 

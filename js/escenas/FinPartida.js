@@ -14,6 +14,7 @@ class FinPartida extends Phaser.Scene {
     const dif = DIFICULTADES[d.dificultad];
     crearFondo(this);
     this.cameras.main.fadeIn(300, 0, 0, 0);
+    Musica.parar(); // un momento de silencio tras la explosión
 
     // Calavera y título
     const calavera = this.add.image(ANCHO / 2, 46, "iconos", ICONO.calavera).setScale(4);
@@ -58,6 +59,8 @@ class FinPartida extends Phaser.Scene {
     this.input.keyboard.on("keydown-ENTER", () => this.reintentar());
     this.input.keyboard.on("keydown-SPACE", () => this.reintentar());
     this.input.keyboard.on("keydown-ESC", () => this.portada());
+    this.input.keyboard.on("keydown-M", () => Sonido.alternar());
+    this.input.keyboard.on("keydown-N", () => Musica.alternar());
     crearScanlines(this);
   }
 

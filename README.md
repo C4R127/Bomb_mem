@@ -35,8 +35,10 @@ el repositorio en **GitHub Pages** (Settings → Pages → rama principal, carpe
 | Ver ayuda | Botón **CÓMO JUGAR** | H |
 | Pulsar una tecla de la bomba | Tocar la tecla | 1 – 9 (por **posición**: 1-2-3 arriba, 7-8-9 abajo) |
 | Cortar un cable | Tocar el cable | Z (rojo) · X (azul) · C (amarillo) — o ← ↑ → |
-| Sonido sí/no | Icono del altavoz | M |
-| Volver a la portada | — | Esc |
+| Pausa / continuar | — | P o Esc |
+| Volver a la portada | Botón **SALIR A PORTADA** de la pausa | S (en pausa) |
+| Efectos de sonido sí/no | Icono del altavoz (portada y pausa) | M |
+| Música sí/no | Icono de la nota (portada y pausa) | N |
 
 ---
 
@@ -87,6 +89,22 @@ Se presentan **una a una** la primera vez (para aprenderlas), en este orden, y l
 
 ---
 
+## 🎵 Música y pausa
+
+- **Dos pistas originales** de estilo chiptune, generadas en tiempo real (sin archivos de audio):
+  - **Portada:** melodía tranquila y pegadiza en La menor (112 BPM).
+  - **Partida:** ritmo tenso de película de espías en Re menor (132 BPM).
+- **La música se calla mientras se enseña la secuencia** (y el cable que parpadea), para que solo se oigan las notas que hay que memorizar. Vuelve cuando es tu turno.
+- Tras una explosión hay un momento de silencio en la pantalla final.
+- **Efectos y música se controlan por separado** (M y N, o los iconos) y el juego recuerda la elección.
+- Los navegadores no dejan sonar nada hasta el primer toque o tecla: la música de la portada empieza en ese momento.
+
+**Pausa (P o Esc durante la partida):** congela el reloj y las animaciones, tapa la bomba
+(para no estudiar el teclado con calma) y ofrece CONTINUAR, EFECTOS, MÚSICA y SALIR A PORTADA.
+Si cambias de pestaña o minimizas el navegador, **el juego se pausa solo**.
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
@@ -95,7 +113,9 @@ Bomb_mem/
 ├── js/
 │   ├── config.js           ⚙️ TODO lo ajustable: dificultades, puntos, tiempos, posiciones
 │   ├── almacen.js          Récords y preferencias (localStorage, a prueba de fallos)
+│   ├── parches.js          Corrección de un fallo de Phaser 3.80 con teclas muy seguidas
 │   ├── sonido.js           Efectos de sonido sintetizados con Web Audio (sin archivos)
+│   ├── musica.js           Música chiptune original (secuenciador Web Audio, sin archivos)
 │   ├── comun.js            Utilidades: texto pixel, botones, fondo animado, scanlines
 │   ├── main.js             Crea el juego de Phaser
 │   └── escenas/
@@ -116,7 +136,7 @@ Bomb_mem/
 ```
 Arranque ──► Portada ──► Juego ──► FinPartida
                 ▲          │  ▲          │
-                └── Esc ───┘  └─ Enter ──┤
+                └ Pausa+S ─┘  └─ Enter ──┤
                 ▲                        │
                 └──────── Esc ───────────┘
 ```
@@ -179,6 +199,8 @@ Todo está en `js/config.js`:
 3. **Normal, niveles 1-7:** las 5 bombas especiales en orden, y que INVERSA, ESPEJO y TRAMPA piden lo correcto.
 4. **Experto con ratón:** teclas sin número, cable equivocado = explosión, récord guardado.
 5. **Tiempo agotado:** la bomba explota al llegar a cero.
+6. **Pausa y música:** música distinta en portada y partida, silencio al memorizar, reloj congelado en pausa, botones de audio, pausa automática al cambiar de pestaña.
+7. **Teclas muy seguidas:** dos teclas en el mismo fotograma se registran una sola vez cada una.
 
 ```bash
 npm install --no-save playwright

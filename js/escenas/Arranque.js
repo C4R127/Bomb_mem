@@ -65,6 +65,7 @@ class Arranque extends Phaser.Scene {
     });
 
     Sonido.iniciar(this.game);
+    Musica.iniciar();
     this.scene.start("Portada");
   }
 }

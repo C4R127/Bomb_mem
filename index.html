@@ -30,11 +30,14 @@
 
 <!-- Phaser 3 desde CDN (no hace falta instalar nada) -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<!-- Corrección de un fallo de Phaser con teclas pulsadas muy seguidas -->
+<script src="js/parches.js"></script>
 
 <!-- Código del juego (el orden importa: primero configuración y utilidades) -->
 <script src="js/config.js"></script>
 <script src="js/almacen.js"></script>
 <script src="js/sonido.js"></script>
+<script src="js/musica.js"></script>
 <script src="js/comun.js"></script>
 <script src="js/escenas/Arranque.js"></script>
 <script src="js/escenas/Portada.js"></script>

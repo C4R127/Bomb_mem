@@ -498,6 +498,7 @@ def generar_botones():
 # 10. ICONOS 12x12
 #     0 bomba · 1 bomba apagada · 2 inversa · 3 cable · 4 barajada
 #     5 sonido sí · 6 sonido no · 7 estrella · 8 calavera · 9 trampa · 10 espejo
+#     11 música sí · 12 música no
 # ---------------------------------------------------------------------------
 ICONOS = [
     [".........y..", "........yoy.", ".......k.y..", "......k.....", "....kkkk....", "..kkddddkk..",
@@ -521,6 +522,10 @@ ICONOS = [
      "kdddrrrrdddk", "kddrrrrrrddk", "kdrrrddrrrdk", "kdrrddddrrdk", "kddddddddddk", ".kkkkkkkkkk."],
     [".....ww.....", ".....ww.....", ".b...ww...b.", ".bb..ww..bb.", ".bbb.ww.bbb.", ".bbbbwwbbbb.",
      ".bbbbwwbbbb.", ".bbb.ww.bbb.", ".bb..ww..bb.", ".b...ww...b.", ".....ww.....", ".....ww....."],
+    ["....wwwwwww.", "....wwwwwww.", "....w.....w.", "....w.....w.", "....w.....w.", "....w.....w.",
+     "....w.....w.", "..www...www.", ".wwww..wwww.", ".wwww..wwww.", "..ww....ww..", "............"],
+    ["....wwwwwww.", "....wwwwwww.", "....w.....w.", "....w.....w.", "....w..r...r", "....w...r.r.",
+     "....w....r..", "..www...r.r.", ".wwww..r...r", ".wwww.......", "..ww........", "............"],
 ]
 COLORES_ICONO = {"k": P["negro"], "w": P["blanco"], "y": hx("#ffd23f"), "o": hx("#ff8a1f"),
                  "r": hx("#ff3b5c"), "g": P["ok"], "b": hx("#29b6ff"), "d": P["carcasa"]}

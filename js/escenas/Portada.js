@@ -25,6 +25,7 @@ class Portada extends Phaser.Scene {
 
     this.actualizarSeleccion();
     this.cameras.main.fadeIn(350, 0, 0, 0);
+    Musica.tocar("portada");
   }
 
   /* ---------- Título y bomba animada ---------- */
@@ -147,18 +148,28 @@ class Portada extends Phaser.Scene {
     const jugar = crearBoton(this, ANCHO / 2, 330, 128, 30, "JUGAR", () => this.jugar(), { tam: 2 });
     this.tweens.add({ targets: [jugar.fondo, jugar.texto], alpha: 0.75, duration: 450, yoyo: true, repeat: -1, ease: "Stepped" });
 
-    crearBoton(this, 82, 366, 128, 20, "CÓMO JUGAR", () => this.abrirAyuda(), { estilo: "boton_osc", color: TINTA.blanco });
+    crearBoton(this, 72, 366, 108, 20, "CÓMO JUGAR", () => this.abrirAyuda(), { estilo: "boton_osc", color: TINTA.blanco });
 
-    this.botonSonido = this.add.nineslice(186, 366, "boton_osc", null, 44, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
-    this.iconoSonido = this.add.image(186, 366, "iconos", Sonido.activo ? ICONO.sonidoSi : ICONO.sonidoNo);
+    // Dos botones de audio: efectos (altavoz) y música (nota)
+    this.botonSonido = this.add.nineslice(158, 366, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
+    this.iconoSonido = this.add.image(158, 366, "iconos", Sonido.activo ? ICONO.sonidoSi : ICONO.sonidoNo);
     this.botonSonido.on("pointerup", () => this.alternarSonido());
+    this.botonMusica = this.add.nineslice(202, 366, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
+    this.iconoMusica = this.add.image(202, 366, "iconos", Musica.activa ? ICONO.musicaSi : ICONO.musicaNo);
+    this.botonMusica.on("pointerup", () => this.alternarMusica());
 
-    texto(this, ANCHO / 2, 386, "ENTER JUGAR · H AYUDA · M SONIDO", { color: 0x6b5a8e, sombra: false });
+    texto(this, ANCHO / 2, 386, "ENTER JUGAR · H AYUDA · M/N AUDIO", { color: 0x6b5a8e, sombra: false });
   }
 
   alternarSonido() {
     const activo = Sonido.alternar();
     this.iconoSonido.setFrame(activo ? ICONO.sonidoSi : ICONO.sonidoNo);
+  }
+
+  alternarMusica() {
+    const activa = Musica.alternar();
+    this.iconoMusica.setFrame(activa ? ICONO.musicaSi : ICONO.musicaNo);
+    Sonido.clic();
   }
 
   /* ---------- Teclado ---------- */
@@ -179,6 +190,11 @@ class Portada extends Phaser.Scene {
     kb.on("keydown-H", () => (this.ayudaAbierta ? this.cerrarAyuda() : this.abrirAyuda()));
     kb.on("keydown-ESC", () => this.cerrarAyuda());
     kb.on("keydown-M", () => this.alternarSonido());
+    kb.on("keydown-N", () => this.alternarMusica());
+    // Los navegadores no dejan sonar nada hasta el primer toque o tecla:
+    // en cuanto lo hay, arranca la música de la portada.
+    this.input.once("pointerdown", () => Musica.tocar("portada"));
+    kb.once("keydown", () => Musica.tocar("portada"));
   }
 
   jugar() {
@@ -203,7 +219,7 @@ class Portada extends Phaser.Scene {
 
     const pasos = [
       "1. OBSERVA LA SECUENCIA DE LUCES.",
-      "2. REPÍTELA ANTES DE QUE ACABE EL RELOJ (RATÓN, DEDO O TECLAS 1-9).",
+      "2. REPÍTELA ANTES DE QUE ACABE EL RELOJ (RATÓN, DEDO O TECLAS 1-9). P: PAUSA.",
       "3. PULSA RÁPIDO PARA SUBIR EL COMBO (×2, ×3...). EL TIEMPO QUE SOBRA DA PUNTOS.",
       "4. UN FALLO O EL RELOJ A CERO: ¡BUM!"
     ];

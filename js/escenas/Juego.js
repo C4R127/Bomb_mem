@@ -6,7 +6,8 @@
      cable      → (bomba CABLE) falta cortar el cable correcto
      desactivada → bonus y pasa a la siguiente bomba
      explotada  → explosión y pantalla de fin de partida
-   Teclado: 1-9 teclas (por posición) · Z X C cables · M sonido · Esc portada
+   Teclado: 1-9 teclas (por posición) · Z X C cables · P/Esc pausa
+            M efectos · N música · (en pausa) S salir a la portada
    ========================================================= */
 class Juego extends Phaser.Scene {
   constructor() { super("Juego"); }
@@ -18,6 +19,10 @@ class Juego extends Phaser.Scene {
 
   create() {
     this.token = 0; // cada bomba/explosión lo incrementa para cancelar procesos viejos
+    // El reloj de la escena se conserva entre partidas: si se salió desde la
+    // pausa, seguiría parado. Se reinicia siempre al empezar.
+    this.time.paused = false;
+    this.pausado = false;
     this.estado = {
       fase: "inicio",
       nivel: 1,
@@ -41,8 +46,17 @@ class Juego extends Phaser.Scene {
     this.crearMensaje();
     this.crearParticulas();
     this.crearEntrada();
+    this.crearPausa();
+    texto(this, ANCHO / 2, 388, "P PAUSA", { color: 0x6b5a8e, sombra: false });
     crearScanlines(this);
 
+    // Si se cambia de pestaña o se minimiza, el juego se pausa solo
+    // (si no, al volver el reloj de la bomba habría seguido corriendo).
+    const alOcultar = () => this.pausar();
+    this.game.events.on("hidden", alOcultar);
+    this.events.once("shutdown", () => this.game.events.off("hidden", alOcultar));
+
+    Musica.tocar("juego");
     this.cameras.main.fadeIn(300, 0, 0, 0);
     this.time.delayedCall(350, () => this.nuevaBomba());
   }
@@ -151,6 +165,15 @@ class Juego extends Phaser.Scene {
   crearEntrada() {
     this.input.keyboard.on("keydown", (ev) => {
       if (ev.repeat) return;
+      const k = ev.key.toLowerCase();
+      if (k === "m") { this.alternarEfectos(); return; }
+      if (k === "n") { this.alternarMusica(); return; }
+      if (this.pausado) {
+        if (k === "p" || k === "escape" || k === "enter") this.reanudar();
+        else if (k === "s") this.volverPortada();
+        return;
+      }
+      if (k === "p" || k === "escape") { this.pausar(); return; }
       if (/^[1-9]$/.test(ev.key)) {
         // Los números del teclado apuntan al HUECO (posición), no a la identidad:
         // así en las bombas barajadas hay que seguir el color con la vista.
@@ -159,9 +182,68 @@ class Juego extends Phaser.Scene {
       }
       const cable = { z: 0, x: 1, c: 2, arrowleft: 0, arrowup: 1, arrowright: 2 }[ev.key.toLowerCase()];
       if (cable !== undefined) this.cortarCable(cable);
-      if (ev.key === "m" || ev.key === "M") Sonido.alternar();
-      if (ev.key === "Escape") this.volverPortada();
     });
+  }
+
+  /* =======================================================
+     PAUSA
+     ======================================================= */
+  crearPausa() {
+    const c = this.add.container(0, 0).setDepth(900).setVisible(false);
+    // El velo tapa la bomba (y captura los toques para que no lleguen debajo)
+    const velo = this.add.rectangle(0, 0, ANCHO, ALTO, 0x0d0820, 0.94).setOrigin(0).setInteractive();
+    const panel = this.add.nineslice(ANCHO / 2, 200, "panel", null, 196, 236, 4, 4, 4, 4);
+    const titulo = texto(this, ANCHO / 2, 96, "PAUSA", { tam: 3, color: TINTA.amarillo });
+    const continuar = crearBoton(this, ANCHO / 2, 150, 160, 26, "CONTINUAR", () => this.reanudar(), { tam: 1 });
+    this.botonEfectos = crearBoton(this, ANCHO / 2, 184, 160, 22, "", () => this.alternarEfectos(),
+      { estilo: "boton_osc", color: TINTA.blanco, sonido: false });
+    this.botonMusica = crearBoton(this, ANCHO / 2, 212, 160, 22, "", () => this.alternarMusica(),
+      { estilo: "boton_osc", color: TINTA.blanco, sonido: false });
+    const salir = crearBoton(this, ANCHO / 2, 246, 160, 22, "SALIR A PORTADA", () => this.volverPortada(),
+      { estilo: "boton_osc", color: TINTA.rojo });
+    const ayuda = texto(this, ANCHO / 2, 272, "P CONTINUAR · S SALIR\nM EFECTOS · N MÚSICA", { color: TINTA.apagado, ancho: 190 });
+    c.add([velo, panel, titulo, continuar.fondo, continuar.texto, this.botonEfectos.fondo, this.botonEfectos.texto,
+      this.botonMusica.fondo, this.botonMusica.texto, salir.fondo, salir.texto, ayuda]);
+    this.panelPausa = c;
+    this.actualizarBotonesAudio();
+  }
+
+  actualizarBotonesAudio() {
+    fijarTexto(this.botonEfectos.texto, "EFECTOS: " + (Sonido.activo ? "SÍ" : "NO"));
+    fijarTexto(this.botonMusica.texto, "MÚSICA: " + (Musica.activa ? "SÍ" : "NO"));
+  }
+
+  alternarEfectos() { Sonido.alternar(); this.actualizarBotonesAudio(); }
+  alternarMusica() { Musica.alternar(); Sonido.clic(); this.actualizarBotonesAudio(); }
+
+  pausar() {
+    const fase = this.estado.fase;
+    if (this.pausado || !["mostrando", "respondiendo", "cable", "desactivada"].includes(fase)) return;
+    this.pausado = true;
+    this.inicioPausa = this.time.now;
+    this.time.paused = true;      // congela esperas y luces programadas
+    this.tweens.pauseAll();       // congela animaciones (deslizar, barajar...)
+    this.bomba.setVisible(false); // sin trampas: no se puede estudiar el teclado en pausa
+    Musica.pausar();
+    this.actualizarBotonesAudio();
+    this.panelPausa.setVisible(true);
+    Sonido.tono(520, 0.08, "square", 0.05);
+  }
+
+  reanudar() {
+    if (!this.pausado) return;
+    // Phaser sigue contando el tiempo de juego durante la pausa:
+    // se desplaza la cuenta atrás lo que haya durado.
+    const duracion = this.time.now - this.inicioPausa;
+    this.estado.fin += duracion;
+    this.estado.ultimoToque += duracion;
+    this.pausado = false;
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    this.bomba.setVisible(true);
+    this.panelPausa.setVisible(false);
+    Musica.reanudar();
+    Sonido.tono(780, 0.08, "square", 0.05);
   }
 
   /* =======================================================
@@ -372,6 +454,9 @@ class Juego extends Phaser.Scene {
       if (tk !== this.token) return;
     }
 
+    // La música baja mientras hay que memorizar (cable y secuencia)
+    Musica.atenuar(true);
+
     if (e.especial === "cable") {
       e.cable = Phaser.Math.Between(0, 2);
       await this.mostrarCable(e.cable);
@@ -396,6 +481,7 @@ class Juego extends Phaser.Scene {
     // ¡A jugar!
     const extra = e.especial ? ESPECIALES[e.especial].tiempoExtra : 0;
     e.fase = "respondiendo";
+    Musica.atenuar(false);
     e.ultimoToque = this.time.now - (PUNTOS.ventanaPrimera - PUNTOS.ventanaCombo);
     e.fin = this.time.now + (p.tiempo + extra) * 1000;
     e.ultimoSegundo = Math.ceil(p.tiempo + extra);
@@ -452,6 +538,7 @@ class Juego extends Phaser.Scene {
   }
 
   pulsar(id) {
+    if (this.pausado) return;
     const e = this.estado;
     if (e.fase !== "respondiendo") return;
     this.iluminar(id, 160, true);
@@ -501,6 +588,7 @@ class Juego extends Phaser.Scene {
   }
 
   cortarCable(i) {
+    if (this.pausado) return;
     const e = this.estado;
     if (e.fase !== "cable") return;
     this.cables[i].setFrame(i * 2 + 1);
@@ -565,6 +653,7 @@ class Juego extends Phaser.Scene {
     this.metralla.explode(18, x, y);
     this.time.delayedCall(250, () => this.humo.explode(16, x, y));
     Sonido.explosion();
+    Musica.parar();
     this.time.delayedCall(300, () => this.bomba.setAlpha(0.25));
 
     // Mostrar la solución
@@ -588,6 +677,8 @@ class Juego extends Phaser.Scene {
   volverPortada() {
     if (this.estado.fase === "explotada") return;
     ++this.token;
+    this.time.paused = false;
+    this.pausado = false;
     this.estado.fase = "saliendo";
     this.scene.start("Portada");
   }
@@ -597,6 +688,7 @@ class Juego extends Phaser.Scene {
      ======================================================= */
   update(tiempo) {
     const e = this.estado;
+    if (this.pausado) return;
     if (e.fase !== "respondiendo" && e.fase !== "cable") return;
 
     const restante = Math.max(0, (e.fin - tiempo) / 1000);
