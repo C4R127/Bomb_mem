@@ -3,6 +3,8 @@
 Juego de memoria en **pixel art** hecho con **[Phaser 3](https://phaser.io/)**.
 Observa la secuencia de luces, repítela antes de que el reloj llegue a cero… y no te equivoques.
 
+**🎮 Jugar online:** <https://c4r127.github.io/Bomb_mem/>
+
 ---
 
 ## ▶️ Cómo jugarlo
