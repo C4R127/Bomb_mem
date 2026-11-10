@@ -29,17 +29,17 @@ class Portada extends Phaser.Scene {
 
   /* ---------- Título y bomba animada ---------- */
   crearTitulo() {
-    const t1 = texto(this, ANCHO / 2, 14, "DESACTIVA", { tam: 3, color: TINTA.amarillo });
-    const t2 = texto(this, ANCHO / 2, 44, "LA BOMBA", { tam: 3, color: TINTA.rojo });
-    t1.setDropShadow(2, 2, 0x000000, 1);
-    t2.setDropShadow(2, 2, 0x000000, 1);
-    // Rebote "a saltos" para que parezca de consola antigua
-    this.tweens.add({ targets: [t1, t2], y: "-=2", duration: 500, yoyo: true, repeat: -1, ease: "Stepped", easeParams: [2] });
+    // Logo "BOOM MEM": dos palabras grandes dentro de un contenedor centrado
+    // en (LOGO.x, LOGO.y) para poder escalarlo y sacudirlo como una pieza.
+    const LOGO = { x: ANCHO / 2, y: 52 };
+    const boom = texto(this, 0, -48, "BOOM", { tam: 5, color: TINTA.amarillo });
+    const mem = texto(this, -22, -6, "MEM", { tam: 5, color: TINTA.rojo });
+    boom.setDropShadow(1, 1, 0x000000, 1);
+    mem.setDropShadow(1, 1, 0x000000, 1);
+    this.logo = this.add.container(LOGO.x, LOGO.y, [boom, mem]);
 
-    const bomba = this.add.sprite(ANCHO / 2, 112, "bomba_portada").setScale(2).play("mecha");
-    this.tweens.add({ targets: bomba, y: 108, duration: 700, yoyo: true, repeat: -1, ease: "Stepped", easeParams: [3] });
-
-    // Chispas que salen de la mecha
+    // La bomba animada acompaña a "MEM", a su derecha
+    const bomba = this.add.sprite(186, 74, "bomba_portada").setScale(2).play("mecha");
     this.add.particles(0, 0, "particulas", {
       frame: [0, 1],
       follow: bomba,
@@ -52,7 +52,49 @@ class Portada extends Phaser.Scene {
       scale: { start: 0.8, end: 0 }
     });
 
-    texto(this, ANCHO / 2, 146, "MEMORIZA · REPITE · SOBREVIVE", { color: TINTA.apagado });
+    texto(this, ANCHO / 2, 112, "DESACTIVA LA BOMBA", { color: TINTA.blanco });
+    texto(this, ANCHO / 2, 130, "MEMORIZA · REPITE · SOBREVIVE", { color: TINTA.apagado });
+
+    // Chispas para el "estallido" del logo
+    this.chispasLogo = this.add.particles(0, 0, "particulas", {
+      emitting: false, frame: [0, 1, 1, 4], speed: { min: 80, max: 230 }, gravityY: 260,
+      lifespan: 650, scale: { start: 1, end: 0 }, rotate: { min: 0, max: 360 }
+    }).setDepth(20);
+
+    this.entradaLogo(bomba);
+  }
+
+  // Al aparecer: el logo crece de golpe, estalla en chispas y tiembla.
+  // Después rebota suave y cada pocos segundos vuelve a "chisporrotear".
+  entradaLogo(bomba) {
+    this.logo.setScale(0);
+    bomba.setScale(0);
+    this.tweens.add({ targets: this.logo, scale: 1, duration: 320, delay: 150, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: bomba, scale: 2, duration: 320, delay: 230, ease: "Back.easeOut",
+      onComplete: () => {
+        this.estallidoLogo(36);
+        this.cameras.main.shake(260, 0.012);
+        Sonido.estallido();
+        // rebote "a saltos" de consola antigua
+        this.tweens.add({ targets: [this.logo, bomba], y: "-=2", duration: 500, yoyo: true, repeat: -1, ease: "Stepped", easeParams: [2] });
+        this.time.addEvent({ delay: 4500, loop: true, callback: () => this.temblorLogo() });
+      }
+    });
+  }
+
+  estallidoLogo(cantidad) {
+    const puntos = [[ANCHO / 2 - 45, 30], [ANCHO / 2 + 45, 30], [ANCHO / 2 - 40, 72], [ANCHO / 2 + 10, 72]];
+    puntos.forEach(([x, y]) => this.chispasLogo.explode(Math.ceil(cantidad / puntos.length), x, y));
+  }
+
+  temblorLogo() {
+    if (this.ayudaAbierta || this.saliendo) return;
+    this.estallidoLogo(10);
+    this.tweens.add({
+      targets: this.logo, x: { from: ANCHO / 2 - 2, to: ANCHO / 2 + 2 }, duration: 50, yoyo: true, repeat: 3,
+      ease: "Stepped", onComplete: () => { this.logo.x = ANCHO / 2; }
+    });
   }
 
   /* ---------- Selector de dificultad ---------- */

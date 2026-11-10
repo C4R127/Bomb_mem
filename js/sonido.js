@@ -92,6 +92,12 @@ const Sonido = {
   corte() { this.ruido(0.12, 4000, 0.4); this.tono(1800, 0.05, "square", 0.05); },
   record() { [784, 988, 1175, 1568].forEach((f, i) => this.tono(f, 0.18, "triangle", 0.07, i * 0.12)); },
 
+  // Pequeño estallido del logo de la portada
+  estallido() {
+    this.ruido(0.45, 1600, 0.25);
+    this.barrido(220, 60, 0.35, "square", 0.06);
+  },
+
   explosion() {
     this.ruido(1.4, 900, 0.55);
     this.barrido(140, 30, 0.9, "sawtooth", 0.16);

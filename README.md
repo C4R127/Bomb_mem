@@ -1,4 +1,6 @@
-# 💣 Desactiva la bomba
+# 💣 Boom Mem
+
+### Desactiva la bomba
 
 Juego de memoria en **pixel art** hecho con **[Phaser 3](https://phaser.io/)**.
 Observa la secuencia de luces, repítela antes de que el reloj llegue a cero… y no te equivoques.
@@ -98,7 +100,7 @@ Bomb_mem/
 │   ├── main.js             Crea el juego de Phaser
 │   └── escenas/
 │       ├── Arranque.js     Carga los PNG, crea la fuente y las animaciones
-│       ├── Portada.js      Título, selector de dificultad, récord, ayuda
+│       ├── Portada.js      Logo BOOM MEM animado, selector de dificultad, récord, ayuda
 │       ├── Juego.js        Lógica de la bomba: secuencias, combos, especiales, explosión
 │       └── FinPartida.js   Resumen, nuevo récord, reintentar
 ├── assets/                 🎨 Pixel art en PNG (editable en Aseprite, Piskel, GIMP…)
