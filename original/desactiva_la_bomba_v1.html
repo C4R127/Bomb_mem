@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Desactiva la bomba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   1. VARIABLES DE COLOR Y TIPOGRAFÍA (tema claro / oscuro)
+   ========================================================= */
+:root {
+  --bg: #efe8fb;
+  --text: #2a1745;
+  --muted: #6b5a8e;
+  --title: #7a2cff;
+  --shadow: #2a1745;
+  --scanline: rgba(42, 23, 69, 0.05);
+
+  /* Colores fijos de la bomba (no cambian con el tema) */
+  --casing: #3a3f4b;
+  --casing-dark: #23262e;
+  --hazard: #ffcc00;
+  --led-bg: #160606;
+  --led: #ff4136;
+  --ok: #3dff8a;
+  --danger: #ff3b5c;
+
+  --font-pixel: "Press Start 2P", "Courier New", monospace;
+  --font-crt: "VT323", "Courier New", monospace;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1035;
+    --text: #f4ecff;
+    --muted: #a493c9;
+    --title: #ffd23f;
+    --shadow: #000000;
+    --scanline: rgba(0, 0, 0, 0.18);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1035;
+  --text: #f4ecff;
+  --muted: #a493c9;
+  --title: #ffd23f;
+  --shadow: #000000;
+  --scanline: rgba(0, 0, 0, 0.18);
+  color-scheme: dark;
+}
+
+/* =========================================================
+   2. ESTRUCTURA GENERAL
+   ========================================================= */
+*, *::before, *::after { box-sizing: inherit; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-crt);
+  font-size: 22px;
+  line-height: 1.3;
+  display: flex;
+  justify-content: center;
+}
+main {
+  width: min(100%, 440px);
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Efecto de pantalla CRT (líneas horizontales) */
+.crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: repeating-linear-gradient(var(--scanline) 0 1px, transparent 1px 3px);
+}
+
+/* =========================================================
+   3. TÍTULO Y MARCADOR
+   ========================================================= */
+h1 {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: clamp(16px, 5.4vw, 24px);
+  line-height: 1.4;
+  text-align: center;
+  color: var(--title);
+  text-shadow: 3px 3px 0 var(--shadow);
+}
+.marcador {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+.marcador span { display: block; color: var(--muted); font-size: 20px; }
+.marcador strong { font-family: var(--font-pixel); font-size: 16px; font-weight: 400; }
+
+/* =========================================================
+   4. LA BOMBA
+   ========================================================= */
+.cables { display: block; width: 100%; height: auto; margin-bottom: -4px; }
+.cables path { fill: none; stroke-width: 7; stroke-linecap: square; }
+.det-led { animation: parpadeo 1s steps(1) infinite; }
+
+.bomba {
+  position: relative;
+  background: var(--casing);
+  border: 8px solid;
+  border-image: repeating-linear-gradient(45deg, var(--hazard) 0 12px, #1a1a1a 12px 24px) 8;
+  padding: 22px 20px 24px;
+  box-shadow: 8px 8px 0 var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tornillo {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: #8a8f9c;
+  box-shadow: inset -2px -2px 0 #4a4e58;
+}
+.tornillo:nth-of-type(1) { top: 6px; left: 6px; }
+.tornillo:nth-of-type(2) { top: 6px; right: 6px; }
+.tornillo:nth-of-type(3) { bottom: 6px; left: 6px; }
+.tornillo:nth-of-type(4) { bottom: 6px; right: 6px; }
+
+/* Pantalla LED con temporizador */
+.pantalla {
+  background: var(--led-bg);
+  border: 4px solid var(--casing-dark);
+  padding: 10px 14px 12px;
+}
+.fila-timer { display: flex; align-items: center; justify-content: space-between; }
+.timer {
+  font-family: var(--font-crt);
+  font-size: 68px;
+  line-height: 1;
+  color: var(--led);
+  text-shadow: 0 0 10px rgba(255, 65, 54, 0.7);
+  letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.timer.urgente { animation: parpadeo 0.4s steps(1) infinite; }
+
+/* Luz de estado: gris = en espera, roja = armada, verde = desactivada */
+.luz {
+  width: 22px; height: 22px;
+  background: #3a3a3a;
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.4);
+}
+.luz.armada { background: var(--danger); box-shadow: 0 0 12px var(--danger); animation: parpadeo 0.8s steps(1) infinite; }
+.luz.ok { background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+
+.mensaje { margin: 6px 0 0; min-height: 2.6em; color: #ff9d96; font-size: 22px; }
+.mensaje[data-tipo="ok"] { color: var(--ok); }
+.mensaje[data-tipo="error"] { color: #ffd23f; }
+
+/* Puntos de progreso: cuántas teclas llevas bien */
+.progreso { display: flex; flex-wrap: wrap; gap: 6px; min-height: 14px; }
+.punto { width: 14px; height: 14px; border: 2px solid #5b606c; }
+.punto.lleno { background: var(--ok); border-color: var(--ok); }
+
+/* Teclado de 9 botones */
+.teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tecla {
+  aspect-ratio: 1;
+  font-family: var(--font-pixel);
+  font-size: clamp(16px, 5vw, 22px);
+  color: var(--c);
+  background: #2b2f3a;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.45), 0 0 0 3px #15171c;
+  cursor: pointer;
+  transition: transform 60ms;
+}
+.tecla.encendida {
+  background: var(--c);
+  color: #111;
+  box-shadow: 0 0 22px var(--c), inset 0 -6px 0 rgba(0, 0, 0, 0.25), 0 0 0 3px #15171c;
+}
+.teclado:not(.bloqueado) .tecla:active { transform: translateY(3px); }
+.teclado.bloqueado .tecla { cursor: not-allowed; }
+.tecla:focus-visible { outline: 3px solid var(--hazard); outline-offset: 3px; }
+
+/* =========================================================
+   5. BOTONES Y AYUDA
+   ========================================================= */
+.controles { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  padding: 14px 18px;
+  border: 0;
+  background: var(--hazard);
+  color: #1a1a1a;
+  box-shadow: 4px 4px 0 var(--shadow);
+  cursor: pointer;
+}
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--shadow); }
+.btn:focus-visible { outline: 3px solid var(--title); outline-offset: 3px; }
+.btn.secundario { background: transparent; color: var(--text); box-shadow: inset 0 0 0 3px var(--text); }
+.oculto { visibility: hidden; }
+.ayuda { margin: 0; color: var(--muted); text-align: center; }
+
+/* =========================================================
+   6. EXPLOSIÓN Y ANIMACIONES
+   ========================================================= */
+.boom {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(circle, #ffffff 0%, #ffd23f 22%, #ff6a00 48%, #7a0010 100%);
+}
+.boom.activo { display: grid; animation: destello 1.1s steps(8) forwards; }
+.boom span {
+  font-family: var(--font-pixel);
+  font-size: clamp(48px, 16vw, 120px);
+  color: #2a0000;
+  text-shadow: 6px 6px 0 #fff3b0;
+}
+.bomba.sacudir { animation: sacudir 0.5s steps(10); }
+
+@keyframes parpadeo { 50% { opacity: 0.25; } }
+@keyframes destello { 0% { opacity: 1; } 65% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sacudir {
+  20% { transform: translate(-8px, 4px); }
+  40% { transform: translate(8px, -6px); }
+  60% { transform: translate(-6px, -4px); }
+  80% { transform: translate(6px, 6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .det-led, .luz.armada, .timer.urgente, .bomba.sacudir { animation: none; }
+  .boom.activo { animation: destello 0.6s linear forwards; }
+}
+</style>
+</head>
+<body>
+<div class="crt" aria-hidden="true"></div>
+
+<main>
+  <h1>Desactiva la bomba</h1>
+
+  <!-- Marcador -->
+  <section class="marcador" aria-label="Marcador">
+    <div><span>Nivel</span><strong id="nivel">1</strong></div>
+    <div><span>Desactivadas</span><strong id="desactivadas">0</strong></div>
+    <div><span>Récord</span><strong id="record">0</strong></div>
+  </section>
+
+  <!-- La bomba -->
+  <div>
+    <svg class="cables" viewBox="0 0 300 60" aria-hidden="true">
+      <path d="M40 60 V30 Q40 12 70 12 H125" stroke="#ff3b5c"/>
+      <path d="M150 60 V10" stroke="#29b6ff"/>
+      <path d="M260 60 V30 Q260 12 230 12 H175" stroke="#ffd23f"/>
+      <rect x="118" y="0" width="64" height="24" fill="#23262e" stroke="#000" stroke-width="3"/>
+      <rect class="det-led" x="140" y="7" width="20" height="10" fill="#ff4136"/>
+    </svg>
+
+    <section class="bomba" id="bomba" aria-label="Bomba">
+      <i class="tornillo"></i><i class="tornillo"></i><i class="tornillo"></i><i class="tornillo"></i>
+
+      <div class="pantalla">
+        <div class="fila-timer">
+          <div class="timer" id="timer" aria-label="Tiempo restante">00.0</div>
+          <div class="luz" id="luz" aria-hidden="true"></div>
+        </div>
+        <p class="mensaje" id="mensaje" aria-live="polite">Pulsa Armar bomba para empezar.</p>
+      </div>
+
+      <div class="progreso" id="progreso" aria-label="Progreso"></div>
+
+      <div class="teclado bloqueado" id="teclado" aria-label="Teclado de desactivación"></div>
+    </section>
+  </div>
+
+  <!-- Controles -->
+  <div class="controles">
+    <button class="btn" id="btnArmar">Armar bomba</button>
+    <button class="btn secundario" id="btnSonido" aria-pressed="true">Sonido: sí</button>
+  </div>
+
+  <p class="ayuda">Observa la secuencia de luces. Cuando arranque el temporizador, repítela en el mismo orden con el ratón, el dedo o las teclas 1 a 9.</p>
+</main>
+
+<div class="boom" id="boom" aria-hidden="true"><span>¡Bum!</span></div>
+
+<script>
+/* =========================================================
+   1. CONFIGURACIÓN DEL JUEGO (cambia estos valores para ajustar la dificultad)
+   ========================================================= */
+const CONFIG = {
+  longitudInicial: 3,         // teclas del patrón en el nivel 1
+  tiempoInicial: 12,          // segundos para responder en el nivel 1
+  restaTiempoPorNivel: 0.8,   // segundos que se pierden en cada nivel
+  tiempoMinimo: 5,            // nunca habrá menos tiempo que esto
+  destelloInicial: 650,       // ms que dura encendida cada luz en el nivel 1
+  restaDestelloPorNivel: 40,  // las luces se vuelven más rápidas
+  destelloMinimo: 280,
+  pausaEntreNiveles: 1600     // ms entre una bomba desactivada y la siguiente
+};
+
+const COLORES = ["#ff3b5c", "#ff8a1f", "#ffd23f", "#2ee6a6", "#29b6ff", "#7a5cff", "#ff4fd8", "#ffffff", "#b4ff3a"];
+const NOTAS = [262, 294, 330, 349, 392, 440, 494, 523, 587]; // una nota distinta por tecla
+
+/* =========================================================
+   2. ESTADO DEL JUEGO
+   fase: "inicio" | "mostrando" | "respondiendo" | "desactivada" | "explotada"
+   ========================================================= */
+const estado = {
+  fase: "inicio",
+  nivel: 1,
+  desactivadas: 0,
+  record: 0,
+  patron: [],
+  posicion: 0,        // cuántas teclas correctas lleva el jugador
+  intervalo: null,
+  ultimoSegundo: null,
+  partida: 0,         // identificador para cancelar procesos de una partida anterior
+  sonido: true
+};
+
+/* =========================================================
+   3. REFERENCIAS AL HTML
+   ========================================================= */
+const $ = (sel) => document.querySelector(sel);
+const el = {
+  timer: $("#timer"), luz: $("#luz"), mensaje: $("#mensaje"), progreso: $("#progreso"),
+  teclado: $("#teclado"), bomba: $("#bomba"), boom: $("#boom"),
+  nivel: $("#nivel"), desactivadas: $("#desactivadas"), record: $("#record"),
+  boton: $("#btnArmar"), sonido: $("#btnSonido")
+};
+
+// Crear las 9 teclas dinámicamente
+const teclas = [];
+for (let i = 1; i <= 9; i++) {
+  const b = document.createElement("button");
+  b.className = "tecla";
+  b.textContent = i;
+  b.style.setProperty("--c", COLORES[i - 1]);
+  b.setAttribute("aria-label", "Tecla " + i);
+  b.addEventListener("click", () => pulsar(i));
+  el.teclado.appendChild(b);
+  teclas.push(b);
+}
+
+/* =========================================================
+   4. SONIDO (Web Audio API, sin archivos externos)
+   ========================================================= */
+let audioCtx = null;
+function audio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function tono(freq, dur = 0.15, tipo = "square", vol = 0.06, retraso = 0) {
+  if (!estado.sonido) return;
+  const ctx = audio();
+  if (!ctx) return;
+  const t = ctx.currentTime + retraso;
+  const osc = ctx.createOscillator();
+  const gan = ctx.createGain();
+  osc.type = tipo;
+  osc.frequency.setValueAtTime(freq, t);
+  gan.gain.setValueAtTime(vol, t);
+  gan.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(gan).connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + dur + 0.02);
+}
+
+function sonidoExito() {
+  [523, 659, 784, 1047].forEach((f, i) => tono(f, 0.14, "square", 0.06, i * 0.1));
+}
+
+function sonidoExplosion() {
+  if (!estado.sonido) return;
+  const ctx = audio();
+  if (!ctx) return;
+  // Ruido blanco que se apaga poco a poco
+  const dur = 1.3;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const datos = buffer.getChannelData(0);
+  for (let i = 0; i < datos.length; i++) {
+    datos[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / datos.length, 2);
+  }
+  const ruido = ctx.createBufferSource();
+  ruido.buffer = buffer;
+  const filtro = ctx.createBiquadFilter();
+  filtro.type = "lowpass";
+  filtro.frequency.value = 900;
+  const gan = ctx.createGain();
+  gan.gain.value = 0.5;
+  ruido.connect(filtro).connect(gan).connect(ctx.destination);
+  ruido.start();
+  // Golpe grave que cae de tono
+  const osc = ctx.createOscillator();
+  const g2 = ctx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(140, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.9);
+  g2.gain.setValueAtTime(0.15, ctx.currentTime);
+  g2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.9);
+  osc.connect(g2).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 1);
+}
+
+/* =========================================================
+   5. UTILIDADES
+   ========================================================= */
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+const formatoTiempo = (s) => s.toFixed(1).padStart(4, "0");
+
+function parametrosNivel(nivel) {
+  return {
+    longitud: CONFIG.longitudInicial + nivel - 1,
+    tiempo: Math.max(CONFIG.tiempoMinimo, CONFIG.tiempoInicial - (nivel - 1) * CONFIG.restaTiempoPorNivel),
+    destello: Math.max(CONFIG.destelloMinimo, CONFIG.destelloInicial - (nivel - 1) * CONFIG.restaDestelloPorNivel)
+  };
+}
+
+// Patrón aleatorio sin la misma tecla dos veces seguidas
+function generarPatron(n) {
+  const p = [];
+  while (p.length < n) {
+    const k = 1 + Math.floor(Math.random() * 9);
+    if (k !== p[p.length - 1]) p.push(k);
+  }
+  return p;
+}
+
+function cargarPreferencias() {
+  try {
+    estado.record = Number(localStorage.getItem("bomba-record")) || 0;
+    estado.sonido = localStorage.getItem("bomba-sonido") !== "no";
+  } catch (e) { /* sin almacenamiento: se usan valores por defecto */ }
+}
+function guardar(clave, valor) {
+  try { localStorage.setItem(clave, valor); } catch (e) {}
+}
+
+/* =========================================================
+   6. INTERFAZ
+   ========================================================= */
+function mensaje(texto, tipo = "") {
+  el.mensaje.textContent = texto;
+  el.mensaje.dataset.tipo = tipo;
+}
+function setLuz(clase) { el.luz.className = "luz " + clase; }
+function setTeclado(activo) {
+  el.teclado.classList.toggle("bloqueado", !activo);
+  teclas.forEach((t) => t.setAttribute("aria-disabled", String(!activo)));
+}
+function actualizarMarcador() {
+  el.nivel.textContent = estado.nivel;
+  el.desactivadas.textContent = estado.desactivadas;
+  el.record.textContent = estado.record;
+}
+function dibujarProgreso() {
+  el.progreso.innerHTML = "";
+  estado.patron.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "punto" + (i < estado.posicion ? " lleno" : "");
+    el.progreso.appendChild(d);
+  });
+  el.progreso.setAttribute("aria-label", `Progreso: ${estado.posicion} de ${estado.patron.length}`);
+}
+function actualizarBotonSonido() {
+  el.sonido.textContent = "Sonido: " + (estado.sonido ? "sí" : "no");
+  el.sonido.setAttribute("aria-pressed", String(estado.sonido));
+}
+function iluminar(n, ms) {
+  const t = teclas[n - 1];
+  t.classList.add("encendida");
+  tono(NOTAS[n - 1], (ms / 1000) * 0.9);
+  setTimeout(() => t.classList.remove("encendida"), ms);
+}
+function reiniciarAnimacion(elemento, clase) {
+  elemento.classList.remove(clase);
+  void elemento.offsetWidth; // fuerza al navegador a reiniciar la animación
+  elemento.classList.add(clase);
+}
+
+/* =========================================================
+   7. TEMPORIZADOR
+   ========================================================= */
+function iniciarTemporizador(segundos) {
+  detenerTemporizador();
+  const fin = performance.now() + segundos * 1000;
+  estado.ultimoSegundo = Math.ceil(segundos);
+  estado.intervalo = setInterval(() => {
+    const restante = Math.max(0, (fin - performance.now()) / 1000);
+    el.timer.textContent = formatoTiempo(restante);
+    el.timer.classList.toggle("urgente", restante <= 3);
+    const s = Math.ceil(restante);
+    if (s !== estado.ultimoSegundo && s > 0) {
+      estado.ultimoSegundo = s;
+      tono(s <= 3 ? 1200 : 800, 0.05, "square", 0.04); // tic-tac
+    }
+    if (restante <= 0) explotar("Se acabó el tiempo");
+  }, 50);
+}
+function detenerTemporizador() {
+  clearInterval(estado.intervalo);
+  estado.intervalo = null;
+  el.timer.classList.remove("urgente");
+}
+
+/* =========================================================
+   8. FLUJO DEL JUEGO
+   ========================================================= */
+function iniciarJuego() {
+  audio(); // el navegador exige un clic antes de reproducir sonido
+  estado.partida++;
+  estado.nivel = 1;
+  estado.desactivadas = 0;
+  el.boton.classList.add("oculto");
+  nuevaBomba();
+}
+
+async function nuevaBomba() {
+  const id = estado.partida;
+  const p = parametrosNivel(estado.nivel);
+  estado.patron = generarPatron(p.longitud);
+  estado.posicion = 0;
+  estado.fase = "mostrando";
+
+  actualizarMarcador();
+  dibujarProgreso();
+  setTeclado(false);
+  setLuz("");
+  el.timer.textContent = formatoTiempo(p.tiempo);
+  mensaje(`Nivel ${estado.nivel}: memoriza ${p.longitud} luces.`);
+
+  await esperar(800);
+  for (const n of estado.patron) {
+    if (id !== estado.partida) return; // la partida se reinició
+    iluminar(n, p.destello);
+    await esperar(p.destello * 1.45);
+  }
+  if (id !== estado.partida) return;
+
+  estado.fase = "respondiendo";
+  setTeclado(true);
+  setLuz("armada");
+  mensaje("Tu turno: repite la secuencia.");
+  iniciarTemporizador(p.tiempo);
+}
+
+function pulsar(n) {
+  if (estado.fase !== "respondiendo") return;
+  iluminar(n, 180);
+  if (n === estado.patron[estado.posicion]) {
+    estado.posicion++;
+    dibujarProgreso();
+    if (estado.posicion === estado.patron.length) desactivar();
+  } else {
+    explotar("Tecla equivocada");
+  }
+}
+
+async function desactivar() {
+  detenerTemporizador();
+  estado.fase = "desactivada";
+  setTeclado(false);
+  setLuz("ok");
+  estado.desactivadas++;
+  if (estado.desactivadas > estado.record) {
+    estado.record = estado.desactivadas;
+    guardar("bomba-record", String(estado.record));
+  }
+  actualizarMarcador();
+  mensaje("¡Bomba desactivada! Llega la siguiente…", "ok");
+  sonidoExito();
+
+  const id = estado.partida;
+  await esperar(CONFIG.pausaEntreNiveles);
+  if (id !== estado.partida) return;
+  estado.nivel++;
+  nuevaBomba();
+}
+
+function explotar(motivo) {
+  detenerTemporizador();
+  estado.fase = "explotada";
+  estado.partida++;
+  setTeclado(false);
+  setLuz("");
+  el.timer.textContent = "00.0";
+  sonidoExplosion();
+  reiniciarAnimacion(el.boom, "activo");
+  reiniciarAnimacion(el.bomba, "sacudir");
+  setTimeout(() => el.boom.classList.remove("activo"), 1200);
+  mensaje(`${motivo}. La secuencia era ${estado.patron.join(" ")}.`, "error");
+  el.boton.textContent = "Jugar otra vez";
+  el.boton.classList.remove("oculto");
+}
+
+/* =========================================================
+   9. EVENTOS
+   ========================================================= */
+el.boton.addEventListener("click", iniciarJuego);
+
+el.sonido.addEventListener("click", () => {
+  estado.sonido = !estado.sonido;
+  guardar("bomba-sonido", estado.sonido ? "si" : "no");
+  actualizarBotonSonido();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  if (/^[1-9]$/.test(e.key)) {
+    pulsar(Number(e.key));
+  } else if (e.key === "Enter" && document.activeElement === document.body &&
+             (estado.fase === "inicio" || estado.fase === "explotada")) {
+    iniciarJuego();
+  }
+});
+
+/* =========================================================
+   10. ARRANQUE
+   ========================================================= */
+cargarPreferencias();
+actualizarMarcador();
+actualizarBotonSonido();
+</script>
+</body>
+</html>

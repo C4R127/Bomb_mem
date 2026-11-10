@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Juego de memoria pixel art: memoriza la secuencia de luces y desactiva la bomba antes de que explote.">
+<title>Desactiva la bomba</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #0d0820;
+    overflow: hidden;
+    touch-action: manipulation;          /* evita el zoom por doble toque en móviles */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #juego {
+    width: 100%;
+    height: 100%;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+             env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    box-sizing: border-box;
+  }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<div id="juego"></div>
+
+<!-- Phaser 3 desde CDN (no hace falta instalar nada) -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+<!-- Código del juego (el orden importa: primero configuración y utilidades) -->
+<script src="js/config.js"></script>
+<script src="js/almacen.js"></script>
+<script src="js/sonido.js"></script>
+<script src="js/comun.js"></script>
+<script src="js/escenas/Arranque.js"></script>
+<script src="js/escenas/Portada.js"></script>
+<script src="js/escenas/Juego.js"></script>
+<script src="js/escenas/FinPartida.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
