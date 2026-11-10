@@ -158,30 +158,31 @@ class Portada extends Phaser.Scene {
 
     const pasos = [
       "1. OBSERVA LA SECUENCIA DE LUCES.",
-      "2. CUANDO ARRANQUE EL RELOJ, REPÍTELA CON EL RATÓN, EL DEDO O LAS TECLAS 1-9.",
-      "3. PULSA RÁPIDO PARA SUBIR EL COMBO: CADA 4 TECLAS SEGUIDAS, ×2, ×3...",
-      "4. EL TIEMPO QUE TE SOBRE SE CONVIERTE EN PUNTOS.",
-      "5. UN FALLO O EL RELOJ A CERO: ¡BUM!"
+      "2. REPÍTELA ANTES DE QUE ACABE EL RELOJ (RATÓN, DEDO O TECLAS 1-9).",
+      "3. PULSA RÁPIDO PARA SUBIR EL COMBO (×2, ×3...). EL TIEMPO QUE SOBRA DA PUNTOS.",
+      "4. UN FALLO O EL RELOJ A CERO: ¡BUM!"
     ];
-    let y = 46;
+    let y = 44;
     pasos.forEach((p) => {
       const t = texto(this, 18, y, p, { origenX: 0, alinear: "izq", ancho: 204 });
       c.add(t);
-      y += t.height + 5;
+      y += t.height + 4;
     });
 
-    c.add(texto(this, ANCHO / 2, y + 4, "- BOMBAS ESPECIALES -", { color: TINTA.naranja }));
-    y += 20;
+    c.add(texto(this, ANCHO / 2, y + 2, "- BOMBAS ESPECIALES -", { color: TINTA.naranja }));
+    y += 17;
     const especiales = [
       [ICONO.inversa, "INVERSA: REPITE LA SECUENCIA AL REVÉS."],
-      [ICONO.cable, "CABLE: RECUERDA EL CABLE QUE PARPADEA. AL TERMINAR, CÓRTALO (TOCA EL CABLE O PULSA Z X C)."],
-      [ICONO.barajada, "BARAJADA: LAS TECLAS CAMBIAN DE SITIO. SIGUE LOS COLORES (LAS TECLAS 1-9 USAN LA POSICIÓN)."]
+      [ICONO.trampa, "TRAMPA: LAS LUCES CON X ROJA SON FALSAS. NO LAS REPITAS."],
+      [ICONO.cable, "CABLE: RECUERDA EL CABLE QUE PARPADEA Y CÓRTALO AL FINAL (Z X C)."],
+      [ICONO.espejo, "ESPEJO: PULSA LA TECLA REFLEJADA (1-3, 4-6, 7-9)."],
+      [ICONO.barajada, "BARAJADA: LAS TECLAS SE MUEVEN. SIGUE LOS COLORES (1-9 USAN LA POSICIÓN)."]
     ];
     especiales.forEach(([icono, linea]) => {
       c.add(this.add.image(24, y + 4, "iconos", icono));
       const t = texto(this, 36, y, linea, { origenX: 0, alinear: "izq", ancho: 188 });
       c.add(t);
-      y += t.height + 6;
+      y += t.height + 4;
     });
 
     const cerrar = crearBoton(this, ANCHO / 2, 368, 100, 22, "ENTENDIDO", () => this.cerrarAyuda());

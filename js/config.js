@@ -37,10 +37,13 @@ const FUENTE = {
 
 /* ---------------------------------------------------------
    DIFICULTADES
-   longitudInicial   teclas del patrón en el nivel 1
-   tiempoInicial     segundos para responder en el nivel 1
-   restaTiempo       segundos que se pierden en cada nivel
-   tiempoMinimo      nunca habrá menos tiempo que esto
+   longitudInicial   luces de la secuencia en el nivel 1
+   nivelesPorLuz     cada cuántos niveles se añade una luz (2 = más suave)
+   tiempoBase        segundos fijos de reacción en cada bomba
+   segundosPorLuz    segundos extra por cada luz de la secuencia (nivel 1)
+   restaPorLuz       cuánto baja ese valor en cada nivel
+   minimoPorLuz      nunca bajará de aquí
+     → tiempo = tiempoBase + luces × segundosPorLuz
    destello*         ms que dura encendida cada luz (más bajo = más rápido)
    multiplicador     multiplica todos los puntos
    especialDesde     nivel en el que aparecen bombas especiales
@@ -51,28 +54,32 @@ const DIFICULTADES = {
   facil: {
     nombre: "FÁCIL", nivelIconos: 1,
     descripcion: "TIEMPO DE SOBRA Y LUCES LENTAS. IDEAL PARA EMPEZAR.",
-    longitudInicial: 3, tiempoInicial: 15, restaTiempo: 0.5, tiempoMinimo: 8,
-    destelloInicial: 700, restaDestello: 30, destelloMinimo: 350,
+    longitudInicial: 3, nivelesPorLuz: 2,
+    tiempoBase: 7, segundosPorLuz: 2.5, restaPorLuz: 0.05, minimoPorLuz: 1.5,
+    destelloInicial: 700, restaDestello: 25, destelloMinimo: 380,
     multiplicador: 1, especialDesde: 4, probEspecial: 0.3, sinNumeros: false
   },
   normal: {
     nombre: "NORMAL", nivelIconos: 2,
     descripcion: "EL RETO CLÁSICO. ESPECIALES DESDE EL NIVEL 3.",
-    longitudInicial: 3, tiempoInicial: 12, restaTiempo: 0.8, tiempoMinimo: 6,
-    destelloInicial: 600, restaDestello: 40, destelloMinimo: 280,
+    longitudInicial: 3, nivelesPorLuz: 2,
+    tiempoBase: 5, segundosPorLuz: 2.2, restaPorLuz: 0.06, minimoPorLuz: 1.2,
+    destelloInicial: 600, restaDestello: 30, destelloMinimo: 300,
     multiplicador: 1.5, especialDesde: 3, probEspecial: 0.35, sinNumeros: false
   },
   dificil: {
     nombre: "DIFÍCIL", nivelIconos: 3,
-    descripcion: "SECUENCIAS LARGAS, LUCES RÁPIDAS Y MÁS ESPECIALES.",
-    longitudInicial: 4, tiempoInicial: 10, restaTiempo: 0.8, tiempoMinimo: 5,
-    destelloInicial: 500, restaDestello: 40, destelloMinimo: 220,
+    descripcion: "UNA LUZ MÁS EN CADA NIVEL, LUCES RÁPIDAS Y MÁS ESPECIALES.",
+    longitudInicial: 4, nivelesPorLuz: 1,
+    tiempoBase: 3.6, segundosPorLuz: 1.6, restaPorLuz: 0.06, minimoPorLuz: 0.9,
+    destelloInicial: 500, restaDestello: 35, destelloMinimo: 230,
     multiplicador: 2, especialDesde: 2, probEspecial: 0.45, sinNumeros: false
   },
   experto: {
     nombre: "EXPERTO", nivelIconos: 4,
     descripcion: "TECLAS SIN NÚMEROS: SOLO COLORES. PUNTOS ×3.",
-    longitudInicial: 5, tiempoInicial: 9, restaTiempo: 0.7, tiempoMinimo: 4.5,
+    longitudInicial: 5, nivelesPorLuz: 1,
+    tiempoBase: 2.5, segundosPorLuz: 1.3, restaPorLuz: 0.05, minimoPorLuz: 0.75,
     destelloInicial: 420, restaDestello: 30, destelloMinimo: 180,
     multiplicador: 3, especialDesde: 2, probEspecial: 0.6, sinNumeros: true
   }
@@ -81,7 +88,9 @@ const ORDEN_DIFICULTADES = ["facil", "normal", "dificil", "experto"];
 const LONGITUD_MAXIMA = 16; // caben 16 puntos de progreso en la bomba
 
 /* ---------------------------------------------------------
-   BOMBAS ESPECIALES (se presentan una a una y luego salen al azar)
+   BOMBAS ESPECIALES
+   Se presentan una a una en el orden de ORDEN_ESPECIALES y
+   después salen al azar.
    --------------------------------------------------------- */
 const ESPECIALES = {
   inversa: {
@@ -89,10 +98,20 @@ const ESPECIALES = {
     aviso: "REPITE LA SECUENCIA AL REVÉS",
     turno: "¡AL REVÉS! EMPIEZA POR LA ÚLTIMA LUZ."
   },
+  trampa: {
+    nombre: "TRAMPA", icono: 9, tiempoExtra: 1,
+    aviso: "LAS LUCES CON X ROJA SON FALSAS: IGNÓRALAS",
+    turno: "REPITE SOLO LAS LUCES BUENAS. ¡SIN LAS X!"
+  },
   cable: {
     nombre: "CABLE", icono: 3, tiempoExtra: 3,
     aviso: "RECUERDA EL CABLE QUE PARPADEA",
     turno: "REPITE LA SECUENCIA Y LUEGO CORTA EL CABLE."
+  },
+  espejo: {
+    nombre: "ESPEJO", icono: 10, tiempoExtra: 2,
+    aviso: "PULSA LA TECLA REFLEJADA: 1-3, 4-6, 7-9",
+    turno: "¡EN ESPEJO! LA COLUMNA DEL CENTRO NO CAMBIA."
   },
   barajada: {
     nombre: "BARAJADA", icono: 4, tiempoExtra: 2,
@@ -100,7 +119,7 @@ const ESPECIALES = {
     turno: "¡SE HAN MOVIDO! SIGUE LOS COLORES."
   }
 };
-const ORDEN_ESPECIALES = ["inversa", "cable", "barajada"];
+const ORDEN_ESPECIALES = ["inversa", "trampa", "cable", "espejo", "barajada"];
 
 /* ---------------------------------------------------------
    PUNTUACIÓN Y COMBOS

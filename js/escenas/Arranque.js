@@ -24,6 +24,7 @@ class Arranque extends Phaser.Scene {
     this.load.image("boton_osc", "boton_osc.png");
     this.load.image("boton_sel", "boton_sel.png");
     this.load.image("panel", "panel.png");
+    this.load.image("trampa", "trampa.png");
     this.load.spritesheet("teclas", "teclas.png", { frameWidth: 48, frameHeight: 48 });
     this.load.spritesheet("cables", "cables.png", { frameWidth: 208, frameHeight: 48 });
     this.load.spritesheet("digitos", "digitos.png", { frameWidth: 12, frameHeight: 20 });

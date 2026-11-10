@@ -68,7 +68,7 @@ function crearScanlines(escena) {
 }
 
 // Icono de 12x12 (ver orden en tools/generar_assets.py)
-const ICONO = { bomba: 0, bombaApagada: 1, inversa: 2, cable: 3, barajada: 4, sonidoSi: 5, sonidoNo: 6, estrella: 7, calavera: 8 };
+const ICONO = { bomba: 0, bombaApagada: 1, inversa: 2, cable: 3, barajada: 4, sonidoSi: 5, sonidoNo: 6, estrella: 7, calavera: 8, trampa: 9, espejo: 10 };
 
 // Formatea puntos con ceros a la izquierda: 120 -> "000120"
 function formatoPuntos(n) {

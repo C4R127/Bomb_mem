@@ -88,6 +88,7 @@ const Sonido = {
   exito() { [523, 659, 784, 1047].forEach((f, i) => this.tono(f, 0.14, "square", 0.06, i * 0.09)); },
   aviso() { [880, 660, 880, 660].forEach((f, i) => this.tono(f, 0.09, "square", 0.05, i * 0.11)); },
   barajar() { this.barrido(200, 900, 0.35, "sawtooth", 0.04); this.barrido(900, 300, 0.3, "sawtooth", 0.03, 0.3); },
+  trampa() { this.barrido(180, 90, 0.25, "sawtooth", 0.07); this.tono(95, 0.25, "square", 0.04); },
   corte() { this.ruido(0.12, 4000, 0.4); this.tono(1800, 0.05, "square", 0.05); },
   record() { [784, 988, 1175, 1568].forEach((f, i) => this.tono(f, 0.18, "triangle", 0.07, i * 0.12)); },
 

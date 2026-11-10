@@ -44,12 +44,23 @@ el repositorio en **GitHub Pages** (Settings → Pages → rama principal, carpe
 | | Fácil | Normal | Difícil | Experto |
 |---|---|---|---|---|
 | Luces en el nivel 1 | 3 | 3 | 4 | 5 |
-| Tiempo en el nivel 1 | 15 s | 12 s | 10 s | 9 s |
-| Tiempo mínimo | 8 s | 6 s | 5 s | 4,5 s |
+| La secuencia crece… | +1 luz cada 2 niveles | +1 luz cada 2 niveles | +1 luz por nivel | +1 luz por nivel |
+| Tiempo (base + por luz) | 7 s + 2,5 s/luz | 5 s + 2,2 s/luz | 3,6 s + 1,6 s/luz | 2,5 s + 1,3 s/luz |
 | Velocidad de las luces | lenta | media | rápida | muy rápida |
 | Bombas especiales desde | nivel 4 | nivel 3 | nivel 2 | nivel 2 |
 | Multiplicador de puntos | ×1 | ×1,5 | ×2 | ×3 |
 | Particularidad | — | — | — | Teclas **sin números**, solo colores |
+
+**Ritmo suave:** el tiempo se calcula según la longitud de la secuencia
+(`tiempo = base + luces × segundos por luz`). Los segundos por luz bajan un
+poco en cada nivel, así que el reto crece sin quedarse nunca sin tiempo
+para secuencias largas. Ejemplos:
+
+| Nivel | Fácil | Normal | Difícil | Experto |
+|---|---|---|---|---|
+| 1 | 3 luces · 14,5 s | 3 · 11,6 s | 4 · 10,0 s | 5 · 9,0 s |
+| 5 | 5 · 18,5 s | 5 · 14,8 s | 8 · 14,5 s | 9 · 12,4 s |
+| 12 | 8 · 22,6 s | 8 · 17,3 s | 15 · 17,7 s | 16 · 14,5 s |
 
 Cada dificultad guarda **su propio récord** (puntos y nivel alcanzado).
 
@@ -62,12 +73,14 @@ Cada dificultad guarda **su propio récord** (puntos y nivel alcanzado).
 - **Bonus especial:** +150 por cada bomba especial desactivada.
 
 ### Bombas especiales
-Se presentan **una a una** la primera vez (para aprenderlas) y luego aparecen al azar:
+Se presentan **una a una** la primera vez (para aprenderlas), en este orden, y luego aparecen al azar:
 
 | | Especial | Qué pasa |
 |---|---|---|
 | ⇆ | **INVERSA** | Hay que repetir la secuencia **al revés**. |
+| ✖ | **TRAMPA** | Entre las luces aparecen 1 o 2 **luces falsas** (con una X roja y un zumbido). No hay que repetirlas: si las pulsas, explota. |
 | ┃┃┃ | **CABLE** | Antes de la secuencia parpadea un cable. Tras repetirla, hay que **cortar ese cable**. Si cortas otro… ¡bum! |
+| ⇥⇤ | **ESPEJO** | Hay que pulsar la tecla **reflejada en horizontal**: 1↔3, 4↔6, 7↔9. La columna central (2, 5, 8) no cambia. Una línea discontinua marca el espejo. |
 | ▦ | **BARAJADA** | Tras la secuencia, las teclas **cambian de sitio** y pierden sus números. Sigue los colores con la vista. |
 
 ---
@@ -123,7 +136,8 @@ Resolución interna: **240 × 400 px**, escalada sin suavizado (`pixelArt: true`
 | `explosion.png` | 96×96 (×8) | Bola de fuego animada |
 | `bomba_portada.png` | 32×32 (×4) | Bomba de la portada con la mecha chisporroteando |
 | `fuente.png` | 6×10 por carácter | Fuente pixel propia con Ñ, tildes, ¡ y ¿ |
-| `iconos.png` | 12×12 (×9) | Bomba, especiales, sonido, estrella, calavera |
+| `iconos.png` | 12×12 (×11) | Bomba, especiales (inversa, cable, barajada, trampa, espejo), sonido, estrella, calavera |
+| `trampa.png` | 48×48 | X roja que marca una luz falsa sobre una tecla |
 | `particulas.png` | 8×8 (×5) | Chispa, chispa naranja, humo, estrella, metralla |
 | `fondo.png` | 32×32 | Placa de circuito (se repite y se desplaza) |
 | `boton*.png`, `panel.png` | 16×16 | Botones y paneles *nine-slice* |
@@ -145,7 +159,7 @@ Resolución interna: **240 × 400 px**, escalada sin suavizado (`pixelArt: true`
 ## ⚙️ Ajustar la dificultad
 
 Todo está en `js/config.js`:
-- `DIFICULTADES` → tiempos, velocidad de las luces, longitud inicial, multiplicadores, cuándo aparecen las especiales.
+- `DIFICULTADES` → longitud inicial, cada cuántos niveles crece la secuencia, tiempo base y por luz, velocidad de las luces, multiplicadores, cuándo aparecen las especiales.
 - `PUNTOS` → puntos por tecla, ventana de combo, bonus.
-- `ESPECIALES` → textos y tiempo extra de cada bomba especial.
+- `ESPECIALES` / `ORDEN_ESPECIALES` → textos, tiempo extra y orden de presentación de cada bomba especial.
 - `TIEMPOS` → pausas entre niveles y tras la explosión.

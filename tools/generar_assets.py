@@ -497,7 +497,7 @@ def generar_botones():
 # ---------------------------------------------------------------------------
 # 10. ICONOS 12x12
 #     0 bomba · 1 bomba apagada · 2 inversa · 3 cable · 4 barajada
-#     5 sonido sí · 6 sonido no · 7 estrella · 8 calavera
+#     5 sonido sí · 6 sonido no · 7 estrella · 8 calavera · 9 trampa · 10 espejo
 # ---------------------------------------------------------------------------
 ICONOS = [
     [".........y..", "........yoy.", ".......k.y..", "......k.....", "....kkkk....", "..kkddddkk..",
@@ -517,6 +517,10 @@ ICONOS = [
      "...yyyyyy...", "..yyyyyyyy..", "..yyy..yyy..", ".yy......yy.", ".y........y.", "............"],
     ["...kkkkkk...", "..kwwwwwwk..", ".kwwwwwwwwk.", ".kwkkwwkkwk.", ".kwkkwwkkwk.", ".kwwwkkwwwk.",
      "..kwwwwwwk..", "...kwkwkwk..", "...kkkkkkk..", "............", "............", "............"],
+    [".kkkkkkkkkk.", "kddddddddddk", "kdrrddddrrdk", "kdrrrddrrrdk", "kddrrrrrrddk", "kdddrrrrdddk",
+     "kdddrrrrdddk", "kddrrrrrrddk", "kdrrrddrrrdk", "kdrrddddrrdk", "kddddddddddk", ".kkkkkkkkkk."],
+    [".....ww.....", ".....ww.....", ".b...ww...b.", ".bb..ww..bb.", ".bbb.ww.bbb.", ".bbbbwwbbbb.",
+     ".bbbbwwbbbb.", ".bbb.ww.bbb.", ".bb..ww..bb.", ".b...ww...b.", ".....ww.....", ".....ww....."],
 ]
 COLORES_ICONO = {"k": P["negro"], "w": P["blanco"], "y": hx("#ffd23f"), "o": hx("#ff8a1f"),
                  "r": hx("#ff3b5c"), "g": P["ok"], "b": hx("#29b6ff"), "d": P["carcasa"]}
@@ -533,6 +537,31 @@ def generar_iconos():
         assert all(len(f) == 12 for f in filas) and len(filas) == 12, f"icono {i} mal formado"
         mapa(img, i * 12, 0, filas, cols)
     guardar(img, "iconos.png")
+
+
+# ---------------------------------------------------------------------------
+# 10b. MARCA DE TRAMPA (48x48): X roja con contorno que se pone sobre una tecla
+#      cuando su luz es falsa (bomba TRAMPA)
+# ---------------------------------------------------------------------------
+def generar_trampa():
+    img = lienzo(48, 48)
+    rojo, claro = hx("#ff3b5c"), hx("#ffb3c0")
+    # contorno negro primero, luego la X roja encima
+    for capa, grosor, color in [(0, 4.2, P["negro"]), (1, 2.6, rojo)]:
+        for y in range(8, 40):
+            for x in range(8, 40):
+                d1 = abs(x - y) / 1.414
+                d2 = abs(x + y - 47) / 1.414
+                if min(d1, d2) <= grosor:
+                    img.putpixel((x, y), color)
+    for i in range(10, 22):          # brillo en un brazo de la X
+        px(img, i, i - 1, claro)
+    # esquinas tipo "punto de mira"
+    for (x, y, dx, dy) in [(3, 3, 1, 1), (44, 3, -1, 1), (3, 44, 1, -1), (44, 44, -1, -1)]:
+        for k in range(6):
+            px(img, x + dx * k, y, rojo)
+            px(img, x, y + dy * k, rojo)
+    guardar(img, "trampa.png")
 
 
 # ---------------------------------------------------------------------------
@@ -628,6 +657,7 @@ if __name__ == "__main__":
     generar_fondo()
     generar_botones()
     generar_iconos()
+    generar_trampa()
     generar_bomba_portada()
     generar_explosion()
     print("Listo.")

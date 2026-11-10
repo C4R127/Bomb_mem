@@ -116,6 +116,15 @@ class Juego extends Phaser.Scene {
       this.teclas.push(t);
       this.bomba.add(t);
     }
+
+    // Marca de luz falsa (bomba TRAMPA)
+    this.marcaTrampa = this.add.image(0, 0, "trampa").setVisible(false);
+    // Línea del espejo sobre la columna central (bomba ESPEJO): trazos de 2 px
+    this.espejo = this.add.container(BOMBA.teclaX[1], 0).setVisible(false);
+    for (let y = BOMBA.teclaY[0] - 26; y < BOMBA.teclaY[2] + 26; y += 6) {
+      this.espejo.add(this.add.rectangle(0, y, 2, 4, 0x9fe8ff).setOrigin(0.5, 0));
+    }
+    this.bomba.add([this.marcaTrampa, this.espejo]);
   }
 
   crearMensaje() {
@@ -182,6 +191,28 @@ class Juego extends Phaser.Scene {
     t.apagar = this.time.delayedCall(ms, () => this.estadoTecla(t, 0));
   }
 
+  // Luz falsa: la tecla se enciende con una X roja encima y suena un zumbido
+  iluminarTrampa(id, ms) {
+    const t = this.teclas[id];
+    this.estadoTecla(t, 1);
+    t.setTint(0xff8080);
+    this.marcaTrampa.setPosition(t.x, t.y).setVisible(true);
+    Sonido.trampa();
+    if (t.apagar) t.apagar.remove();
+    t.apagar = this.time.delayedCall(ms, () => {
+      this.estadoTecla(t, 0);
+      t.clearTint();
+      this.marcaTrampa.setVisible(false);
+    });
+  }
+
+  mostrarEspejo(visible) {
+    this.espejo.setVisible(visible);
+    this.tweens.killTweensOf(this.espejo);
+    this.espejo.setAlpha(1);
+    if (visible) this.tweens.add({ targets: this.espejo, alpha: 0.35, duration: 400, yoyo: true, repeat: -1, ease: "Stepped" });
+  }
+
   fijarLuz(cual) { this.luz.setFrame({ apagada: 0, armada: 1, ok: 2 }[cual]); }
 
   fijarMensaje(cadena, color = TINTA.blanco) {
@@ -241,14 +272,38 @@ class Juego extends Phaser.Scene {
   /* =======================================================
      REGLAS: parámetros por nivel, combos y especiales
      ======================================================= */
+  // Ritmo de dificultad: la secuencia crece cada "nivelesPorLuz" niveles y el
+  // tiempo se calcula según su longitud (base + segundos por luz).
   parametros() {
     const d = this.dif;
     const n = this.estado.nivel - 1;
+    const longitud = Math.min(LONGITUD_MAXIMA, d.longitudInicial + Math.floor(n / d.nivelesPorLuz));
+    const porLuz = Math.max(d.minimoPorLuz, d.segundosPorLuz - n * d.restaPorLuz);
     return {
-      longitud: Math.min(LONGITUD_MAXIMA, d.longitudInicial + n),
-      tiempo: Math.max(d.tiempoMinimo, d.tiempoInicial - n * d.restaTiempo),
+      longitud,
+      tiempo: Math.round((d.tiempoBase + longitud * porLuz) * 10) / 10,
       destello: Math.max(d.destelloMinimo, d.destelloInicial - n * d.restaDestello)
     };
+  }
+
+  // Tecla reflejada en horizontal (1↔3, 4↔6, 7↔9; la columna central no cambia)
+  reflejar(id) {
+    const fila = Math.floor(id / 3);
+    return fila * 3 + (2 - (id % 3));
+  }
+
+  // Secuencia que se ENSEÑA: en las bombas TRAMPA se intercalan luces falsas
+  secuenciaVisible(patron) {
+    const lista = patron.map((id) => ({ id, falsa: false }));
+    if (this.estado.especial !== "trampa") return lista;
+    const cuantas = patron.length >= 6 ? 2 : 1;
+    for (let k = 0; k < cuantas; k++) {
+      const pos = Phaser.Math.Between(1, lista.length);  // nunca la primera luz
+      const vecinos = [lista[pos - 1] && lista[pos - 1].id, lista[pos] && lista[pos].id];
+      const opciones = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((i) => !vecinos.includes(i));
+      lista.splice(pos, 0, { id: Phaser.Utils.Array.GetRandom(opciones), falsa: true });
+    }
+    return lista;
   }
 
   multiplicador() {
@@ -288,7 +343,10 @@ class Juego extends Phaser.Scene {
     e.especial = this.elegirEspecial();
     if (e.especial) e.ultimoEspecial = e.especial;
     e.patron = this.generarPatron(p.longitud);
-    e.objetivo = e.especial === "inversa" ? [...e.patron].reverse() : e.patron;
+    if (e.especial === "inversa") e.objetivo = [...e.patron].reverse();
+    else if (e.especial === "espejo") e.objetivo = e.patron.map((id) => this.reflejar(id));
+    else e.objetivo = e.patron;
+    const visibles = this.secuenciaVisible(e.patron);
     e.posicion = 0;
     e.fase = "mostrando";
 
@@ -321,9 +379,11 @@ class Juego extends Phaser.Scene {
     }
 
     await this.esperar(TIEMPOS.antesDeSecuencia);
-    for (const id of e.patron) {
+    if (e.especial === "espejo") this.mostrarEspejo(true);
+    for (const luz of visibles) {
       if (tk !== this.token) return;
-      this.iluminar(id, p.destello, false);
+      if (luz.falsa) this.iluminarTrampa(luz.id, p.destello);
+      else this.iluminar(luz.id, p.destello, false);
       await this.esperar(p.destello * 1.45);
     }
     if (tk !== this.token) return;
@@ -347,6 +407,8 @@ class Juego extends Phaser.Scene {
     this.bomba.setAlpha(1);
     this.cables.forEach((c, i) => c.setFrame(i * 2).clearTint());
     this.iconoEspecial.setVisible(false);
+    this.marcaTrampa.setVisible(false);
+    this.mostrarEspejo(false);
     this.fijarLuz("apagada");
     this.teclas.forEach((t) => {
       t.clearTint();
