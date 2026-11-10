@@ -8,8 +8,11 @@ class Portada extends Phaser.Scene {
   constructor() { super("Portada"); }
 
   create() {
-    crearFondo(this);
+    // Phaser REUTILIZA la escena al volver a ella: hay que reiniciar aquí
+    // todo el estado propio, o se arrastra el de la visita anterior.
+    this.saliendo = false;
     this.ayudaAbierta = false;
+    crearFondo(this);
 
     const guardada = Almacen.leer("bomba-dificultad", "normal");
     this.seleccion = Math.max(0, ORDEN_DIFICULTADES.indexOf(guardada));

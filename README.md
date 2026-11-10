@@ -104,6 +104,8 @@ Bomb_mem/
 ├── assets/                 🎨 Pixel art en PNG (editable en Aseprite, Piskel, GIMP…)
 ├── tools/
 │   └── generar_assets.py   Script que dibuja todos los PNG píxel a píxel
+├── tests/
+│   └── e2e.js              Pruebas automáticas que juegan en un navegador real
 └── original/
     └── desactiva_la_bomba_v1.html   Versión inicial (HTML + JS sin Phaser), como referencia
 ```
@@ -163,3 +165,24 @@ Todo está en `js/config.js`:
 - `PUNTOS` → puntos por tecla, ventana de combo, bonus.
 - `ESPECIALES` / `ORDEN_ESPECIALES` → textos, tiempo extra y orden de presentación de cada bomba especial.
 - `TIEMPOS` → pausas entre niveles y tras la explosión.
+
+---
+
+## 🧪 Pruebas automáticas
+
+`tests/e2e.js` abre el juego en Chromium y lo juega solo para comprobar:
+
+1. **Navegación:** portada → juego → fin → portada → juego… (botones, Enter y Esc), sin quedarse bloqueado.
+2. **Sin fugas:** al entrar y salir varias veces de las escenas no se duplican eventos de teclado.
+3. **Normal, niveles 1-7:** las 5 bombas especiales en orden, y que INVERSA, ESPEJO y TRAMPA piden lo correcto.
+4. **Experto con ratón:** teclas sin número, cable equivocado = explosión, récord guardado.
+5. **Tiempo agotado:** la bomba explota al llegar a cero.
+
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+node tests/e2e.js
+```
+
+Para probar la versión publicada: `URL=https://c4r127.github.io/Bomb_mem/ node tests/e2e.js`
+

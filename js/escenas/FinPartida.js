@@ -9,6 +9,7 @@ class FinPartida extends Phaser.Scene {
   init(datos) { this.datos = datos; }
 
   create() {
+    this.saliendo = false; // la escena se reutiliza entre partidas (ver Portada.create)
     const d = this.datos;
     const dif = DIFICULTADES[d.dificultad];
     crearFondo(this);
