@@ -122,6 +122,20 @@ const ESPECIALES = {
 const ORDEN_ESPECIALES = ["inversa", "trampa", "cable", "espejo", "barajada"];
 
 /* ---------------------------------------------------------
+   ESCENARIOS
+   Cada bomba aparece en uno al azar (nunca dos veces seguidas el
+   mismo). Cada escenario tiene su fondo (escenario_<clave>.png),
+   su carcasa de bomba (bomba_<clave>.png) y un icono de colección.
+   --------------------------------------------------------- */
+const ESCENARIOS = {
+  bunker:      { nombre: "BÚNKER",           icono: 13 },
+  laboratorio: { nombre: "LABORATORIO",      icono: 14 },
+  tren:        { nombre: "TREN NOCTURNO",    icono: 15 },
+  camara:      { nombre: "CÁMARA ACORAZADA", icono: 16 }
+};
+const ORDEN_ESCENARIOS = ["bunker", "laboratorio", "tren", "camara"];
+
+/* ---------------------------------------------------------
    PUNTUACIÓN Y COMBOS
    --------------------------------------------------------- */
 const PUNTOS = {

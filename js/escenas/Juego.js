@@ -35,12 +35,15 @@ class Juego extends Phaser.Scene {
       posicion: 0,
       especial: null,
       ultimoEspecial: null,
+      escenario: null,  // clave del escenario de la bomba actual (ver ESCENARIOS)
       cable: 0,        // cable correcto en las bombas CABLE
       fin: 0,          // instante (ms) en que explota
       ultimoSegundo: 0
     };
 
-    crearFondo(this);
+    // Fondo del escenario: dos imágenes para hacer un fundido al cambiar
+    this.fondos = [0, 1].map(() => this.add.image(0, 0, "escenario_bunker").setOrigin(0).setDepth(-10).setAlpha(0));
+    this.fondoActivo = 0;
     this.crearHUD();
     this.crearBomba();
     this.crearMensaje();
@@ -97,7 +100,7 @@ class Juego extends Phaser.Scene {
       return zona;
     });
 
-    this.cuerpo = this.add.image(0, b.cuerpoY, "bomba").setOrigin(0);
+    this.cuerpo = this.add.image(0, b.cuerpoY, "bomba_bunker").setOrigin(0);
     this.bomba.add(this.cuerpo);
 
     // Reloj de 7 segmentos (escala 2)
@@ -218,7 +221,7 @@ class Juego extends Phaser.Scene {
 
   pausar() {
     const fase = this.estado.fase;
-    if (this.pausado || !["mostrando", "respondiendo", "cable", "desactivada"].includes(fase)) return;
+    if (this.pausado || !["inicio", "mostrando", "respondiendo", "cable", "desactivada"].includes(fase)) return;
     this.pausado = true;
     this.inicioPausa = this.time.now;
     this.time.paused = true;      // congela esperas y luces programadas
@@ -405,6 +408,24 @@ class Juego extends Phaser.Scene {
     return Phaser.Utils.Array.GetRandom(opciones);
   }
 
+  // Escenario al azar, distinto del de la bomba anterior
+  elegirEscenario() {
+    const opciones = ORDEN_ESCENARIOS.filter((k) => k !== this.estado.escenario);
+    return Phaser.Utils.Array.GetRandom(opciones);
+  }
+
+  // Fundido entre el fondo actual y el del nuevo escenario
+  cambiarFondo(escenario, ms) {
+    const viejo = this.fondos[this.fondoActivo];
+    this.fondoActivo = 1 - this.fondoActivo;
+    const nuevo = this.fondos[this.fondoActivo];
+    nuevo.setTexture("escenario_" + escenario).setDepth(-9);
+    viejo.setDepth(-10);
+    if (ms === 0) { nuevo.setAlpha(1); viejo.setAlpha(0); return; }
+    nuevo.setAlpha(0);
+    this.tweens.add({ targets: nuevo, alpha: 1, duration: ms, onComplete: () => viejo.setAlpha(0) });
+  }
+
   generarPatron(n) {
     const p = [];
     while (p.length < n) {
@@ -432,20 +453,23 @@ class Juego extends Phaser.Scene {
     e.posicion = 0;
     e.fase = "mostrando";
 
+    e.escenario = this.elegirEscenario();
+    if (e.nivel > 1) this.bomba.x = ANCHO + 10; // fuera de pantalla antes de cambiar su aspecto
     this.reiniciarBomba();
+    this.cuerpo.setTexture("bomba_" + e.escenario);
+    this.cambiarFondo(e.escenario, e.nivel === 1 ? 0 : 450);
     this.actualizarHUD();
     this.dibujarReloj(p.tiempo + (e.especial ? ESPECIALES[e.especial].tiempoExtra : 0));
     this.dibujarProgreso();
 
     // La bomba entra deslizándose desde la derecha (salvo la primera)
     if (e.nivel > 1) {
-      this.bomba.x = ANCHO + 10;
       this.tweens.add({ targets: this.bomba, x: BOMBA.x, duration: 350, ease: "Cubic.easeOut" });
       await this.esperar(380);
       if (tk !== this.token) return;
     }
 
-    this.fijarMensaje(`NIVEL ${e.nivel} · ${this.dif.nombre}\nMEMORIZA ${p.longitud} LUCES`, TINTA.blanco);
+    this.fijarMensaje(`NIVEL ${e.nivel} · ${ESCENARIOS[e.escenario].nombre}\nMEMORIZA ${p.longitud} LUCES`, TINTA.blanco);
 
     if (e.especial) {
       const esp = ESPECIALES[e.especial];
@@ -612,6 +636,13 @@ class Juego extends Phaser.Scene {
     e.puntos += bonusTiempo + bonusEspecial;
     e.bombas++;
     this.actualizarHUD();
+    // Colección: primera bomba desactivada en este escenario (en esta dificultad)
+    if (Almacen.marcarEscenario(this.claveDif, e.escenario)) {
+      this.time.delayedCall(350, () => {
+        this.flotante(ANCHO / 2, BOMBA.y + 52, "¡NUEVO ESCENARIO!", TINTA.amarillo, 2);
+        Sonido.record();
+      });
+    }
 
     let linea = `¡BOMBA DESACTIVADA!\nTIEMPO +${bonusTiempo}`;
     if (bonusEspecial) linea += ` · ESPECIAL +${bonusEspecial}`;

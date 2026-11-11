@@ -89,6 +89,24 @@ Se presentan **una a una** la primera vez (para aprenderlas), en este orden, y l
 
 ---
 
+## 🗺️ Escenarios
+
+Cada bomba aparece en un **escenario al azar** (nunca el mismo dos veces seguidas),
+con su propio fondo pixel y su propia **carcasa de bomba**:
+
+| Escenario | Fondo | Bomba |
+|---|---|---|
+| **Búnker** | Hormigón, tubería, alarmas rojas, cajas de munición | Camuflaje verde oliva |
+| **Laboratorio** | Azulejos, fluorescentes, tubos de ensayo, matraces | Metal claro con franjas cian |
+| **Tren nocturno** | Vagón, barras amarillas, ciudad iluminada por la ventanilla | Chapa oxidada con remaches |
+| **Cámara acorazada** | Puerta circular de caja fuerte, láseres, lingotes de oro | Acero negro con molduras doradas |
+
+**Colección:** la primera vez que desactivas una bomba en un escenario aparece
+"¡NUEVO ESCENARIO!" y se enciende su icono en la portada (fila *ESCENARIOS*, p. ej. `2/4`).
+La colección es independiente para cada dificultad: el objetivo es completar los 4 en todas.
+
+---
+
 ## 🎵 Música y pausa
 
 - **Dos pistas originales** de estilo chiptune, generadas en tiempo real (sin archivos de audio):
@@ -153,14 +171,15 @@ Resolución interna: **240 × 400 px**, escalada sin suavizado (`pixelArt: true`
 
 | Archivo | Tamaño de frame | Contenido |
 |---|---|---|
-| `bomba.png` | 208×256 | Carcasa con franjas de peligro, tornillos, pantalla LED, rejillas |
+| `bomba_<escenario>.png` | 208×256 | Una carcasa por escenario: franjas, tornillos, pantalla LED y detalles propios |
+| `escenario_<escenario>.png` | 240×400 | Fondo de cada escenario (búnker, laboratorio, tren, cámara) |
 | `cables.png` | 208×48 (×8) | Cable rojo/azul/amarillo (entero y cortado) + detonador (LED off/on) |
 | `teclas.png` | 48×48 (6 × 9) | 9 colores × {apagada, encendida, pulsada} × {con número, sin número} |
 | `digitos.png` | 12×20 (×12) | Dígitos de 7 segmentos 0-9, punto y "apagado" |
 | `explosion.png` | 96×96 (×8) | Bola de fuego animada |
 | `bomba_portada.png` | 32×32 (×4) | Bomba de la portada con la mecha chisporroteando |
 | `fuente.png` | 6×10 por carácter | Fuente pixel propia con Ñ, tildes, ¡ y ¿ |
-| `iconos.png` | 12×12 (×11) | Bomba, especiales (inversa, cable, barajada, trampa, espejo), sonido, estrella, calavera |
+| `iconos.png` | 12×12 (×17) | Bomba, especiales, sonido, música, estrella, calavera y los 4 escenarios |
 | `trampa.png` | 48×48 | X roja que marca una luz falsa sobre una tecla |
 | `particulas.png` | 8×8 (×5) | Chispa, chispa naranja, humo, estrella, metralla |
 | `fondo.png` | 32×32 | Placa de circuito (se repite y se desplaza) |
@@ -196,7 +215,7 @@ Todo está en `js/config.js`:
 
 1. **Navegación:** portada → juego → fin → portada → juego… (botones, Enter y Esc), sin quedarse bloqueado.
 2. **Sin fugas:** al entrar y salir varias veces de las escenas no se duplican eventos de teclado.
-3. **Normal, niveles 1-7:** las 5 bombas especiales en orden, y que INVERSA, ESPEJO y TRAMPA piden lo correcto.
+3. **Normal, niveles 1-7:** las 5 bombas especiales en orden, y que INVERSA, ESPEJO y TRAMPA piden lo correcto. Escenarios: cada bomba tiene uno, nunca se repite seguido, la carcasa coincide y la colección se guarda y se ve en la portada.
 4. **Experto con ratón:** teclas sin número, cable equivocado = explosión, récord guardado.
 5. **Tiempo agotado:** la bomba explota al llegar a cero.
 6. **Pausa y música:** música distinta en portada y partida, silencio al memorizar, reloj congelado en pausa, botones de audio, pausa automática al cambiar de pestaña.

@@ -123,9 +123,14 @@ class Portada extends Phaser.Scene {
       return { fondo, nombre, iconos };
     });
 
-    this.descripcion = texto(this, ANCHO / 2, 272, "", { color: TINTA.apagado, ancho: 220 });
-    this.iconoRecord = this.add.image(0, 302, "iconos", ICONO.estrella);
-    this.textoRecord = texto(this, ANCHO / 2 + 8, 297, "", { color: TINTA.amarillo });
+    this.descripcion = texto(this, ANCHO / 2, 270, "", { color: TINTA.apagado, ancho: 220 });
+    this.iconoRecord = this.add.image(0, 298, "iconos", ICONO.estrella);
+    this.textoRecord = texto(this, ANCHO / 2 + 8, 293, "", { color: TINTA.amarillo });
+
+    // Colección de escenarios: se encienden al desactivar una bomba en cada uno
+    this.textoColeccion = texto(this, 0, 308, "ESCENARIOS", { color: TINTA.apagado, origenX: 0, alinear: "izq" });
+    this.iconosColeccion = ORDEN_ESCENARIOS.map((k) => this.add.image(0, 313, "iconos", ESCENARIOS[k].icono));
+    this.cuentaColeccion = texto(this, 0, 308, "", { color: TINTA.blanco, origenX: 0, alinear: "izq" });
   }
 
   actualizarSeleccion() {
@@ -140,25 +145,40 @@ class Portada extends Phaser.Scene {
     const r = Almacen.record(clave);
     fijarTexto(this.textoRecord, r.puntos > 0 ? `RÉCORD ${formatoPuntos(r.puntos)} · NIVEL ${r.nivel}` : "SIN RÉCORD TODAVÍA");
     this.iconoRecord.x = this.textoRecord.x - this.textoRecord.width / 2 - 9;
+
+    const vistos = Almacen.coleccion(clave);
+    fijarTexto(this.cuentaColeccion, `${vistos.length}/${ORDEN_ESCENARIOS.length}`);
+    this.cuentaColeccion.setTint(vistos.length === ORDEN_ESCENARIOS.length ? TINTA.verde : TINTA.blanco);
+    // Centrar la fila: "ESCENARIOS" + 4 iconos + "2/4"
+    const anchoFila = this.textoColeccion.width + 6 + ORDEN_ESCENARIOS.length * 15 + 4 + this.cuentaColeccion.width;
+    let x = Math.round(ANCHO / 2 - anchoFila / 2);
+    this.textoColeccion.x = x;
+    x += this.textoColeccion.width + 6;
+    ORDEN_ESCENARIOS.forEach((k, i) => {
+      const conseguido = vistos.includes(k);
+      this.iconosColeccion[i].setPosition(x + 6, 313).setAlpha(conseguido ? 1 : 0.25).setTint(conseguido ? 0xffffff : 0x8070a0);
+      x += 15;
+    });
+    this.cuentaColeccion.x = x + 4;
     Almacen.escribir("bomba-dificultad", clave);
   }
 
   /* ---------- Botones inferiores ---------- */
   crearBotones() {
-    const jugar = crearBoton(this, ANCHO / 2, 330, 128, 30, "JUGAR", () => this.jugar(), { tam: 2 });
+    const jugar = crearBoton(this, ANCHO / 2, 336, 128, 30, "JUGAR", () => this.jugar(), { tam: 2 });
     this.tweens.add({ targets: [jugar.fondo, jugar.texto], alpha: 0.75, duration: 450, yoyo: true, repeat: -1, ease: "Stepped" });
 
-    crearBoton(this, 72, 366, 108, 20, "CÓMO JUGAR", () => this.abrirAyuda(), { estilo: "boton_osc", color: TINTA.blanco });
+    crearBoton(this, 72, 368, 108, 20, "CÓMO JUGAR", () => this.abrirAyuda(), { estilo: "boton_osc", color: TINTA.blanco });
 
     // Dos botones de audio: efectos (altavoz) y música (nota)
-    this.botonSonido = this.add.nineslice(158, 366, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
-    this.iconoSonido = this.add.image(158, 366, "iconos", Sonido.activo ? ICONO.sonidoSi : ICONO.sonidoNo);
+    this.botonSonido = this.add.nineslice(158, 368, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
+    this.iconoSonido = this.add.image(158, 368, "iconos", Sonido.activo ? ICONO.sonidoSi : ICONO.sonidoNo);
     this.botonSonido.on("pointerup", () => this.alternarSonido());
-    this.botonMusica = this.add.nineslice(202, 366, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
-    this.iconoMusica = this.add.image(202, 366, "iconos", Musica.activa ? ICONO.musicaSi : ICONO.musicaNo);
+    this.botonMusica = this.add.nineslice(202, 368, "boton_osc", null, 40, 20, 4, 4, 4, 5).setInteractive({ useHandCursor: true });
+    this.iconoMusica = this.add.image(202, 368, "iconos", Musica.activa ? ICONO.musicaSi : ICONO.musicaNo);
     this.botonMusica.on("pointerup", () => this.alternarMusica());
 
-    texto(this, ANCHO / 2, 386, "ENTER JUGAR · H AYUDA · M/N AUDIO", { color: 0x6b5a8e, sombra: false });
+    texto(this, ANCHO / 2, 388, "ENTER JUGAR · H AYUDA · M/N AUDIO", { color: 0x6b5a8e, sombra: false });
   }
 
   alternarSonido() {

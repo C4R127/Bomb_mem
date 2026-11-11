@@ -213,51 +213,243 @@ def tornillo(img, x, y):
                             "d": P["tornillo"], "k": P["carcasa_osc"]})
 
 
-def generar_bomba():
+# Variantes de la carcasa: una por escenario (colores + detalles propios)
+VARIANTES_BOMBA = {
+    "bunker":      {"carcasa": "#4a5236", "luz": "#69734b", "osc": "#2a301e", "hundida": "#394026",
+                    "franja": ("#ffcc00", "#1a1a1a")},
+    "laboratorio": {"carcasa": "#aab8c2", "luz": "#dfe9ef", "osc": "#5e6e79", "hundida": "#7f8f9a",
+                    "franja": ("#29b6ff", "#0f2430")},
+    "tren":        {"carcasa": "#6b3a2a", "luz": "#94573a", "osc": "#3a1d14", "hundida": "#4f2a1e",
+                    "franja": ("#ffcc00", "#1a1a1a")},
+    "camara":      {"carcasa": "#2b2b33", "luz": "#4d4d5a", "osc": "#131318", "hundida": "#202027",
+                    "franja": ("#e8b84a", "#3a2a08")},
+}
+
+
+def detalles_bomba(img, nombre, v, W, H):
+    """Detalles propios de cada escenario sobre la carcasa (antes de los huecos)."""
+    rnd = random.Random(nombre)
+    if nombre == "bunker":
+        # Camuflaje: manchas de dos tonos
+        for _ in range(38):
+            cx, cy, r = rnd.randint(8, W - 8), rnd.randint(8, H - 8), rnd.randint(4, 11)
+            col = hx(rnd.choice(["#5d6640", "#3b4229", "#6e7450"]))
+            for y in range(cy - r, cy + r):
+                for x in range(cx - r - 3, cx + r + 3):
+                    if 8 <= x < W - 8 and 8 <= y < H - 8 and ((x - cx) / 1.4) ** 2 + (y - cy) ** 2 < r * r:
+                        img.putpixel((x, y), col)
+    elif nombre == "laboratorio":
+        # Paneles lisos con juntas y una franja cian
+        for y in (90, 250):
+            rect(img, 8, y - 1, W - 16, 1, hx(v["osc"]))
+        rect(img, 8, 8, 3, H - 16, hx("#29b6ff"))
+        rect(img, W - 11, 8, 3, H - 16, hx("#29b6ff"))
+    elif nombre == "tren":
+        # Chapa con óxido y filas de remaches
+        for _ in range(60):
+            x, y = rnd.randint(8, W - 10), rnd.randint(8, H - 10)
+            rect(img, x, y, rnd.randint(2, 5), rnd.randint(1, 3), hx(rnd.choice(["#7d4a2c", "#5a2f20", "#8a5a30"])))
+        for x in range(14, W - 14, 9):
+            rect(img, x, 9, 2, 2, hx("#c89a6a")); rect(img, x, H - 11, 2, 2, hx("#c89a6a"))
+        for y in range(18, H - 18, 9):
+            rect(img, 9, y, 2, 2, hx("#c89a6a")); rect(img, W - 11, y, 2, 2, hx("#c89a6a"))
+    elif nombre == "camara":
+        # Molduras doradas y rombos de acero pulido
+        oro = hx("#e8b84a")
+        rect(img, 8, 8, W - 16, 1, oro); rect(img, 8, H - 9, W - 16, 1, oro)
+        rect(img, 8, 8, 1, H - 16, oro); rect(img, W - 9, 8, 1, H - 16, oro)
+        for y in range(14, H - 12, 8):
+            for x in range(14 + (y // 8 % 2) * 4, W - 12, 8):
+                px(img, x, y, hx("#3b3b46"))
+
+
+def generar_bomba(nombre):
+    v = VARIANTES_BOMBA[nombre]
+    car, luz, osc, hund = hx(v["carcasa"]), hx(v["luz"]), hx(v["osc"]), hx(v["hundida"])
+    claro, oscuro = hx(v["franja"][0]), hx(v["franja"][1])
     W, H = 208, 256
     img = lienzo(W, H)
-    # Borde de peligro (franjas diagonales amarillo/negro) de 6px
+    # Borde de franjas diagonales de 6px (colores del escenario)
     for y in range(H):
         for x in range(W):
             if x < 6 or y < 6 or x >= W - 6 or y >= H - 6:
-                c = P["peligro"] if ((x + y) // 6) % 2 == 0 else P["peligro_osc"]
-                img.putpixel((x, y), c)
-    # Contorno exterior oscuro y esquinas recortadas
+                img.putpixel((x, y), claro if ((x + y) // 6) % 2 == 0 else oscuro)
     biselar(img, 0, 0, W, H, P["negro"], P["negro"])
     for (cx, cy) in [(0, 0), (W - 1, 0), (0, H - 1), (W - 1, H - 1)]:
         px(img, cx, cy, TRANSPARENTE)
-    # Carcasa metálica
-    rect(img, 6, 6, W - 12, H - 12, P["carcasa"])
-    biselar(img, 6, 6, W - 12, H - 12, P["carcasa_luz"], P["carcasa_osc"], 2)
-    # Textura de metal cepillado (líneas tenues)
+    # Carcasa
+    rect(img, 6, 6, W - 12, H - 12, car)
+    biselar(img, 6, 6, W - 12, H - 12, luz, osc, 2)
     rnd = random.Random(7)
     for y in range(10, H - 10, 3):
         x0 = rnd.randint(10, 60)
         largo = rnd.randint(20, 90)
-        rect(img, x0, y, min(largo, W - 12 - x0), 1, mezcla(P["carcasa"], P["carcasa_luz"], 0.35))
-    # Tornillos
+        rect(img, x0, y, min(largo, W - 12 - x0), 1, mezcla(car, luz, 0.35))
+    detalles_bomba(img, nombre, v, W, H)
     for (tx, ty) in [(10, 10), (W - 17, 10), (10, H - 17), (W - 17, H - 17)]:
         tornillo(img, tx, ty)
-    # Pantalla LED hundida: x=12..196, y=14..72
-    rect(img, 12, 14, 184, 58, P["carcasa_osc"])
-    biselar(img, 12, 14, 184, 58, P["carcasa_osc"], P["carcasa_luz"])
+    # Pantalla LED hundida: x=12..196, y=14..72 (igual en todas)
+    rect(img, 12, 14, 184, 58, osc)
+    biselar(img, 12, 14, 184, 58, osc, luz)
     rect(img, 15, 17, 178, 52, P["led_fondo"])
     for y in range(18, 69, 2):
         rect(img, 15, y, 178, 1, P["led_linea"])
-    # Brillo del cristal en la esquina
     for i in range(10):
         px(img, 18 + i, 19, hx("#3a1a1a"))
-    # Ranura de los puntos de progreso
-    rect(img, 12, 76, 184, 12, P["carcasa_hundida"])
-    biselar(img, 12, 76, 184, 12, P["carcasa_osc"], P["carcasa_luz"])
-    # Hueco del teclado: x=24..184, y=91..249
-    rect(img, 24, 91, 160, 158, P["carcasa_hundida"])
-    biselar(img, 24, 91, 160, 158, P["carcasa_osc"], P["carcasa_luz"], 2)
-    # Rejilla de ventilación a los lados del teclado
+    # Ranura de progreso y hueco del teclado
+    rect(img, 12, 76, 184, 12, hund)
+    biselar(img, 12, 76, 184, 12, osc, luz)
+    rect(img, 24, 91, 160, 158, hund)
+    biselar(img, 24, 91, 160, 158, osc, luz, 2)
     for y in range(110, 230, 6):
-        rect(img, 12, y, 8, 2, P["carcasa_osc"])
-        rect(img, W - 20, y, 8, 2, P["carcasa_osc"])
-    guardar(img, "bomba.png")
+        rect(img, 12, y, 8, 2, osc)
+        rect(img, W - 20, y, 8, 2, osc)
+    guardar(img, f"bomba_{nombre}.png")
+
+
+# ---------------------------------------------------------------------------
+# 3b. ESCENARIOS (240x400, pantalla completa detrás de la bomba)
+#     La bomba tapa el centro: los detalles van en las franjas laterales
+#     (x<16, x>224), en las esquinas superiores y en la franja inferior (y>330).
+# ---------------------------------------------------------------------------
+def degradado(img, arriba, abajo):
+    a, b = hx(arriba), hx(abajo)
+    for y in range(img.height):
+        rect(img, 0, y, img.width, 1, mezcla(a, b, y / (img.height - 1)))
+
+
+def escenario_bunker():
+    img = lienzo(240, 400)
+    degradado(img, "#20241a", "#14170f")
+    # Bloques de hormigón
+    for fila, y in enumerate(range(0, 340, 20)):
+        desp = 0 if fila % 2 == 0 else 20
+        for x in range(-desp, 240, 40):
+            rect(img, x + 1, y + 1, 38, 18, hx("#2a2f20" if (x // 40 + fila) % 3 else "#2f3524"))
+            rect(img, x + 1, y + 1, 38, 1, hx("#363c29"))
+    # Tubería superior con abrazaderas
+    rect(img, 0, 22, 240, 6, hx("#4a4f3a")); rect(img, 0, 22, 240, 1, hx("#6a7055")); rect(img, 0, 27, 240, 1, hx("#25281c"))
+    for x in range(6, 240, 36):
+        rect(img, x, 20, 4, 10, hx("#2a2d22"))
+    # Lámparas de alarma rojas en las esquinas
+    for x in (4, 220):
+        rect(img, x, 32, 16, 4, hx("#1a1a1a"))
+        rect(img, x + 2, 36, 12, 8, hx("#ff3b2f")); rect(img, x + 4, 37, 4, 2, hx("#ffb0a0"))
+        rect(img, x + 2, 44, 12, 2, hx("#7a1010"))
+    # Suelo con franjas de peligro y cajas de munición
+    rect(img, 0, 372, 240, 28, hx("#1a1d14"))
+    for x in range(0, 240):
+        rect(img, x, 372, 1, 4, hx("#c9a000") if ((x + 372) // 6) % 2 == 0 else hx("#151515"))
+    for (cx, cy) in [(2, 356), (2, 378), (24, 378), (196, 378), (218, 378), (218, 356)]:
+        rect(img, cx, cy, 20, 20, hx("#3e4a26")); rect(img, cx, cy, 20, 2, hx("#58653a"))
+        rect(img, cx + 2, cy + 8, 16, 2, hx("#2a3218")); rect(img, cx + 8, cy + 4, 4, 3, hx("#c9a000"))
+    return img
+
+
+def escenario_laboratorio():
+    img = lienzo(240, 400)
+    degradado(img, "#11303a", "#0b1f26")
+    # Azulejos
+    for y in range(0, 340, 12):
+        for x in range(0, 240, 12):
+            rect(img, x, y, 11, 11, hx("#15394400" if False else "#163a45"))
+            px(img, x + 1, y + 1, hx("#1e4a57"))
+    # Fluorescentes arriba
+    for x in (2, 196):
+        rect(img, x, 2, 42, 5, hx("#0a1418")); rect(img, x + 2, 3, 38, 3, hx("#bff6ff"))
+    # Estanterías laterales con tubos de ensayo
+    for xs in (0, 224):
+        for y in (110, 190, 270):
+            rect(img, xs, y, 16, 3, hx("#5e6e79"))
+            for k, col in enumerate(["#3dff8a", "#ff4fd8", "#29b6ff"]):
+                tx = xs + 2 + k * 5
+                rect(img, tx, y - 14, 3, 14, hx("#cfe8f0"))
+                rect(img, tx, y - 7 + k, 3, 7 - k, hx(col))
+    # Mesa de laboratorio con matraces
+    rect(img, 0, 372, 240, 5, hx("#dfe9ef")); rect(img, 0, 377, 240, 23, hx("#3a4a52"))
+    rect(img, 0, 377, 240, 2, hx("#25323a"))
+    for (x, col) in [(6, "#3dff8a"), (200, "#ff4fd8"), (222, "#29b6ff")]:
+        rect(img, x + 4, 352, 4, 8, hx("#cfe8f0"))
+        for k in range(12):
+            w = min(12, 2 + k)
+            rect(img, x + 6 - w // 2, 360 + k, w, 1, hx("#cfe8f0") if k < 5 else hx(col))
+    return img
+
+
+def escenario_tren():
+    img = lienzo(240, 400)
+    degradado(img, "#141a33", "#0b0f20")
+    # Paneles del vagón con remaches
+    for x in range(0, 240, 40):
+        rect(img, x, 0, 1, 340, hx("#222a4a"))
+        for y in range(6, 340, 14):
+            px(img, x + 3, y, hx("#3a4470"))
+    # Portaequipajes arriba
+    rect(img, 0, 16, 240, 3, hx("#9aa3b5"))
+    for x in range(0, 240, 6):
+        rect(img, x, 19, 1, 6, hx("#6a7385"))
+    # Barras amarillas a los lados
+    for x in (4, 232):
+        rect(img, x, 30, 4, 300, hx("#ffcc00")); rect(img, x, 30, 1, 300, hx("#fff08a"))
+    # Ventanilla inferior con la ciudad de noche
+    rect(img, 0, 332, 240, 48, hx("#05070f"))
+    rnd = random.Random(3)
+    x = 0
+    while x < 240:
+        w, h = rnd.randint(10, 22), rnd.randint(10, 38)
+        rect(img, x, 380 - h, w, h, hx("#141a33"))
+        for yy in range(380 - h + 3, 378, 5):
+            for xx in range(x + 2, x + w - 2, 4):
+                if rnd.random() < 0.45:
+                    rect(img, xx, yy, 2, 2, hx(rnd.choice(["#ffb347", "#ffd27a", "#ff8a1f"])))
+        x += w + rnd.randint(0, 4)
+    rect(img, 0, 330, 240, 3, hx("#9aa3b5")); rect(img, 0, 380, 240, 4, hx("#9aa3b5"))
+    rect(img, 0, 384, 240, 16, hx("#3a1d14"))  # asientos
+    for x in range(0, 240, 30):
+        rect(img, x + 2, 386, 26, 10, hx("#6b3a2a")); rect(img, x + 2, 386, 26, 2, hx("#94573a"))
+    return img
+
+
+def escenario_camara():
+    img = lienzo(240, 400)
+    degradado(img, "#16131c", "#0c0a10")
+    oro, oro_osc = hx("#e8b84a"), hx("#8a6a20")
+    # Gran puerta circular de la cámara acorazada (asoma alrededor de la bomba)
+    cx, cy = 120, 190
+    for y in range(400):
+        for x in range(240):
+            d = math.hypot(x - cx, y - cy)
+            if 150 <= d <= 162:
+                img.putpixel((x, y), hx("#4a4a55") if d < 160 else hx("#2a2a32"))
+            elif 162 < d <= 165:
+                img.putpixel((x, y), oro_osc)
+    for k in range(12):  # pernos del marco
+        a = k * math.pi / 6
+        bx, by = int(cx + 156 * math.cos(a)), int(cy + 156 * math.sin(a))
+        rect(img, bx - 2, by - 2, 5, 5, oro)
+    # Láseres rojos
+    for (x1, y1, x2, y2) in [(0, 60, 40, 0), (200, 0, 240, 60), (0, 300, 30, 340), (210, 340, 240, 300)]:
+        n = max(abs(x2 - x1), abs(y2 - y1))
+        for t in range(n):
+            px(img, x1 + (x2 - x1) * t // n, y1 + (y2 - y1) * t // n, hx("#ff3b5c"))
+    # Lingotes de oro apilados abajo
+    rect(img, 0, 344, 240, 56, hx("#1d1a24"))
+    def lingote(x, y):
+        rect(img, x, y, 18, 7, oro); rect(img, x + 2, y, 14, 2, hx("#fff0b0")); rect(img, x, y + 6, 18, 1, oro_osc)
+    for (x, y) in [(2, 386), (21, 386), (40, 386), (11, 378), (30, 378), (20, 370),
+                   (180, 386), (199, 386), (218, 386), (190, 378), (209, 378), (200, 370)]:
+        lingote(x, y)
+    return img
+
+
+ESCENARIOS = {"bunker": escenario_bunker, "laboratorio": escenario_laboratorio,
+              "tren": escenario_tren, "camara": escenario_camara}
+
+
+def generar_escenarios():
+    for nombre, dibujar in ESCENARIOS.items():
+        guardar(dibujar(), f"escenario_{nombre}.png")
+        generar_bomba(nombre)
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +690,7 @@ def generar_botones():
 # 10. ICONOS 12x12
 #     0 bomba · 1 bomba apagada · 2 inversa · 3 cable · 4 barajada
 #     5 sonido sí · 6 sonido no · 7 estrella · 8 calavera · 9 trampa · 10 espejo
-#     11 música sí · 12 música no
+#     11 música sí · 12 música no · 13 búnker · 14 laboratorio · 15 tren · 16 cámara
 # ---------------------------------------------------------------------------
 ICONOS = [
     [".........y..", "........yoy.", ".......k.y..", "......k.....", "....kkkk....", "..kkddddkk..",
@@ -526,6 +718,14 @@ ICONOS = [
      "....w.....w.", "..www...www.", ".wwww..wwww.", ".wwww..wwww.", "..ww....ww..", "............"],
     ["....wwwwwww.", "....wwwwwww.", "....w.....w.", "....w.....w.", "....w..r...r", "....w...r.r.",
      "....w....r..", "..www...r.r.", ".wwww..r...r", ".wwww.......", "..ww........", "............"],
+    ["............", "............", "...kkkkkk...", "..kddddddk..", ".kddddddddk.", "kddddddddddk",
+     "kdddkkkkdddk", "kdddkrrkdddk", "kdddkkkkdddk", "kkkkkkkkkkkk", "yykkyykkyykk", "............"],
+    ["....kkkk....", "....kwwk....", "....kwwk....", "....kwwk....", "...kwwwwk...", "..kwwwwwwk..",
+     ".kwggggggwk.", ".kggggggggk.", "kggwggggggk.", "kggggggggggk", ".kkkkkkkkkk.", "............"],
+    ["..kkkkkkkk..", ".kddddddddk.", ".kdbbddbbdk.", ".kdbbddbbdk.", ".kddddddddk.", ".kddddddddk.",
+     ".kdyddddydk.", ".kddddddddk.", "..kkkkkkkk..", "...k....k...", "..kk....kk..", "kkkkkkkkkkkk"],
+    ["..kkkkkkkk..", ".kyyyyyyyyk.", "kyykkkkkyyyk", "kykwwwwwkyyk", "kykwkkkwkyyk", "kykwkykwkyyk",
+     "kykwkkkwkyyk", "kykwwwwwkyyk", "kyykkkkkyyyk", ".kyyyyyyyyk.", "..kkkkkkkk..", "............"],
 ]
 COLORES_ICONO = {"k": P["negro"], "w": P["blanco"], "y": hx("#ffd23f"), "o": hx("#ff8a1f"),
                  "r": hx("#ff3b5c"), "g": P["ok"], "b": hx("#29b6ff"), "d": P["carcasa"]}
@@ -654,7 +854,7 @@ if __name__ == "__main__":
     os.makedirs(SALIDA, exist_ok=True)
     print("Generando assets en", SALIDA)
     generar_fuente()
-    generar_bomba()
+    generar_escenarios()
     generar_cables()
     generar_teclas()
     generar_digitos()

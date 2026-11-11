@@ -160,9 +160,15 @@ async function main() {
     const p = await nuevaPagina();
     await p.keyboard.press("Enter");
     const vistas = [];
+    const escenarios = [];
     let trampaVista = false;
+    let carcasaCorrecta = true;
     for (let n = 1; n <= 7; n++) {
       let s = await esperarFase(p, ["mostrando"]);
+      const esc = await p.evaluate(() => { const g = juego.scene.getScene("Juego");
+        return { clave: g.estado.escenario, carcasa: g.cuerpo.texture.key }; });
+      escenarios.push(esc.clave);
+      if (esc.carcasa !== "bomba_" + esc.clave) carcasaCorrecta = false;
       while (s.fase === "mostrando") { if (s.trampa) trampaVista = true; await p.waitForTimeout(40); s = await estado(p); }
       s = await esperarFase(p, ["respondiendo"]);
       vistas.push(s.especial || "-");
@@ -177,6 +183,18 @@ async function main() {
       comprobar(f.fase === "desactivada", `nivel ${n} (${s.especial || "normal"}, ${s.patron.length} luces, ${s.restante.toFixed(1)} s) desactivado`);
     }
     comprobar(vistas.join() === "-,-,inversa,trampa,cable,espejo,barajada", "orden de presentación de especiales: " + vistas.join(" "));
+    comprobar(escenarios.every((k) => ["bunker", "laboratorio", "tren", "camara"].includes(k)), "cada bomba tiene escenario: " + escenarios.join(" "));
+    comprobar(escenarios.every((k, i) => i === 0 || k !== escenarios[i - 1]), "el escenario nunca se repite dos bombas seguidas");
+    comprobar(carcasaCorrecta, "la carcasa de la bomba corresponde a su escenario");
+    const coleccion = await p.evaluate(() => JSON.parse(localStorage.getItem("bomba-coleccion-normal") || "[]"));
+    const esperada = [...new Set(escenarios)].sort().join();
+    comprobar(coleccion.slice().sort().join() === esperada, "la colección guarda los escenarios superados: " + coleccion.join(" "));
+    await p.keyboard.press("Escape"); await p.waitForTimeout(100); await p.keyboard.press("s");
+    await esperarEscena(p, "Portada"); await p.waitForTimeout(300);
+    const enPortada = await p.evaluate(() => { const sc = juego.scene.getScene("Portada");
+      return { cuenta: sc.cuentaColeccion.text, encendidos: sc.iconosColeccion.filter((i) => i.alpha === 1).length }; });
+    comprobar(enPortada.cuenta === `${coleccion.length}/4` && enPortada.encendidos === coleccion.length,
+      `la portada muestra la colección (${enPortada.cuenta}, ${enPortada.encendidos} iconos encendidos)`);
     comprobar(p.errores.length === 0, "sin errores de JavaScript " + p.errores.join(" | "));
     await p.close();
   }

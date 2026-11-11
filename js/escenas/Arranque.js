@@ -17,7 +17,11 @@ class Arranque extends Phaser.Scene {
 
     this.load.setPath("assets/");
     this.load.image("fuente", "fuente.png");
-    this.load.image("bomba", "bomba.png");
+    // Un fondo y una carcasa de bomba por escenario
+    ORDEN_ESCENARIOS.forEach((k) => {
+      this.load.image("escenario_" + k, "escenario_" + k + ".png");
+      this.load.image("bomba_" + k, "bomba_" + k + ".png");
+    });
     this.load.image("fondo", "fondo.png");
     this.load.image("scanlines", "scanlines.png");
     this.load.image("boton", "boton.png");
